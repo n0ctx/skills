@@ -1,6 +1,6 @@
 ---
 name: tavern-aesthetic
-description: 为角色扮演、互动小说、游戏面板、人物档案和叙事型网页设计或改造具有精品酒馆前端卡质感的界面。适用于酒馆风格、视觉小说式 UI、题材化美术、沉浸式角色页面与精致游戏交互；复杂界面按分阶段流程打磨到作品级完成度。不因普通网页开发任务自动触发。独立于 SillyTavern 和具体前端框架。
+description: Use when designing tavern-card UI, not generic web pages.
 ---
 
 # Tavern Aesthetic — 沉浸式叙事前端设计
