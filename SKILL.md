@@ -1,6 +1,6 @@
 ---
 name: tavern-aesthetic
-description: Use when designing frontend UI in a tavern aesthetic.
+description: Use for tavern-style page and frontend design.
 ---
 
 # Tavern Aesthetic — 沉浸式叙事前端设计
