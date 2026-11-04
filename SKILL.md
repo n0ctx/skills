@@ -1,6 +1,6 @@
 ---
 name: tavern-aesthetic
-description: Use when designing tavern-card UI, not generic web pages.
+description: Use when designing frontend UI in a tavern aesthetic.
 ---
 
 # Tavern Aesthetic — 沉浸式叙事前端设计
