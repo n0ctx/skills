@@ -1,7 +1,7 @@
 ---
 name: software-engineering
-description: Use for implementing, modifying, debugging, configuring, testing, reviewing, or maintaining software. Guides local implementation decisions and prevents recurring coding-agent failures across evolving repositories.
-version: 1.2.0
+description: Use for coding, debugging, configuring, testing, reviewing.
+version: 1.2.1
 metadata:
   hermes:
     category: development
