@@ -3,198 +3,144 @@ name: tavern-aesthetic
 description: Use for tavern-style page and frontend design.
 ---
 
-# Tavern Aesthetic — 沉浸式叙事前端设计
+# Tavern Aesthetic — Immersive Narrative Frontend Design
 
-## 目标与边界
+## What this skill produces
 
-把题材和故事转化为**有作品身份、可交互的界面**，而不是给 Dashboard 换色，也不是堆砌通用游戏 HUD。标杆是精品前端卡，它具备四点：
+A working UI that reads as an artifact from the story world — not a re-skinned dashboard and not a pile of generic game-HUD props. The bar is the polished front-end card: one glance identifies the work, every surface shares one art direction, details are finished, and interaction feels natural.
 
-- 一眼可辨的视觉身份。
-- 角色、世界、素材、版式、组件与交互出自同一套美术。
-- 细节经过收口。
-- 交互自然。
+Polish ≠ complexity. Polish means every visible choice is intentional and every visible region meets the same quality bar.
 
-高完成度不等于复杂、华丽或装饰多，而是每个选择都有意图，每个可见区域都达到同一水准。
+This skill covers visual design and implementation method. It does not depend on SillyTavern, any helper plugin, MVU, or any framework. Reuse the project's existing stack, components, assets, and interaction patterns. If the user asks for a design only, do not touch code.
 
-本 Skill 指导视觉设计与实现方法，不依赖 SillyTavern、酒馆助手、MVU 或特定框架。优先沿用项目已有的技术栈、组件、资源和交互逻辑。用户只要求设计方案时，不擅自改代码。
+## References (read on demand, never all upfront)
 
-## 参考资料
+- `references/design-knowledge.md` — decision guide by dimension (narrative identity, color, type, shape, light/material, image, layout, components, motion, adaptation) plus failure-mode tables. Consult the section matching the decision at hand.
+- `references/workflow.md` — staged process, pass/fail gates, review method, rollback rules, design-record template. Read before any medium or complex task.
+- `references/asset-sources.md` — sources and license checks for illustration, texture, icon, font. Read when collecting assets online.
+- `references/research.md` — evidence and limitations behind this skill. Not needed for execution.
 
-按需读取，不要预先全部加载：
+## Task levels
 
-- [references/design-knowledge.md](references/design-knowledge.md)：按维度整理的设计知识，以及跨维度取舍和失败模式速查。维度包括叙事融合、视觉语言、空间、层级与组件、交互动效、适配。定调和遇到具体设计问题时，查对应章节。
-- [references/workflow.md](references/workflow.md)：分阶段流程、每阶段的通过标准、视觉复查方法、回退规则和设计记录模板。中等和复杂任务开始前阅读。
-- [references/asset-sources.md](references/asset-sources.md)：插画、纹理、图标等外部素材的来源与许可核对。需要网络收集素材时读取。
-- [references/research.md](references/research.md)：本 Skill 的研究依据与局限。执行任务时不需要读取。
+Judge by design difficulty, not code volume:
 
-## 任务分级
+- **Simple**: one component, a detail fix, a small feature inside an existing visual language. Reuse the language; screenshot-check once after implementing.
+- **Medium**: a single page/panel or one redesign of an existing screen. Do a brief direction-setting, build the focal area first, then complete the page; 1–2 review rounds.
+- **Complex**: multi-screen flow, gamified system, build from scratch, needs a bespoke key visual, or the user asks for finished-product quality. Run the six stages in `workflow.md` and keep a design record.
 
-按实际设计难度判断，不按代码量：
+## Anti-drift rules (binding)
 
-- **简单**：改一个组件、修细节、在已有视觉语言内加小功能。沿用现有语言，实现后截图检查一次。
-- **中等**：单个页面或面板、已有界面的一次改版。先简短定调，再把焦点区域做到位，然后补全页面，复查 1～2 轮。
-- **复杂**：多屏流程、游戏化系统、从零构建、需要专属主视觉，或用户要求作品级完成度。按 workflow.md 的六个阶段推进，并保留设计记录。
+These exist because multi-turn execution drifts. Follow them literally:
 
-## 核心原则
+1. **Design record is the single source of truth.** For medium and complex tasks, create it (template in `workflow.md`) at direction-setting time and re-read it at the start of every subsequent turn/module. Any new color, radius, font, or motion value must be added to the record's token registry before use. If a value is not in the registry, it is not allowed in code.
+2. **Freeze the token registry after the core sample passes.** Later modules may only reuse registered tokens. New tokens require an explicit note in the record explaining why the existing set cannot express the need.
+3. **Every module is screenshot-compared side-by-side with the core sample before moving on.** No exceptions; verbal comparison is not enough.
+4. **Max two fix rounds per stage.** If still failing, roll back and diagnose per the rollback table in `workflow.md` instead of layering more fixes.
+5. **One active direction at a time.** Do not keep alternative directions alive across turns. Pick one, record it, discard the rest.
 
-1. **为作品设计，而不是给题材套皮。**
-   - 先回答：这个界面在故事里是什么物件或系统，谁制作，给谁看，什么时候看。
-   - 再选一个属于这部作品的记忆点。
-   - 视觉身份来自具体的人物、地点、年代、势力、事件和道具。"末日=黑黄雷达""修仙=墨绿金框"这类题材公式只是起点，需要继续具体化。
-   - 自检方法：把同题材的另一个普通需求交给 Agent，若会得到几乎相同的界面，说明方向还不够具体。
-   - 可以在内部比较几个方向，但只交付最合适的一个，常规任务不向用户罗列备选。
-2. **一个概念统领所有设计语言。**
-   - 颜色来自材料和光源，字体来自书写方式，形状来自工艺，动效来自物件的动作。
-   - 相关维度在同一时刻协同决定，不按"先全部颜色、再全部字体"的顺序施工。
-   - 对任何元素都应能说出它表达了概念的哪一部分。
-3. **具象美术用插画素材，代码手绘只作占位。**
-   - 人物、场景、器物等具象主体，终版使用插画素材。来源依次是项目已有资源、AI 生图、网络收集。
-   - 用 CSS/SVG 画出的场景、人物和器物，只能用于构图和概念验证阶段的占位，交付前必须替换；复杂任务最晚在核心样板阶段替换。它们精度低，会让整个界面显得像手搓的小游戏。
-   - 代码负责界面本身：版式、排版、边框、纹理、装饰纹样、图标、抽象图形和数据图形。
-4. **插画主导画面，并参与构图。**
-   - 插画决定版面重心，文字与组件围绕它布置，而不是被装进卡片当配图，也不只是一条顶栏。
-   - 主要屏幕都要有画面感：缩小看时，画面主要由插画构成，而不是由深色面板、细线和文字构成。
-   - 美术存在感要延续到功能页面，例如插画作为面板下的底层、人物越过面板边界、场景随时间与地点切换。开场精致、进入功能页后退化为文字面板，是最常见的完成度落差。
-   - 一屏一个主图。其余图像要融进同一画面，或成为风格统一的成组图版，不要把几张来源不同的图片装进方框并排摆放。
-5. **信息呈现服从界面身份，但克制道具。**
-   - 信息使用世界中的格式与语汇，例如账目的版式、名册的编排、世界内的动词和名词，并按叙事节奏揭示。
-   - 一个主载体贯穿全局。不要每个模块换一个用 CSS 仿制的道具，例如胶带便签、歪盖的印章、挂签、算盘珠；它们堆在一起会显得廉价。
-   - 克制的是道具和装饰，不是画面与色彩。删掉道具后留下的空间，交给插画和排版，而不是变成深色底上的文字表单。
-   - 不要把所有信息都做成"标签：数值"、进度条和等宽卡片。建档、设置这类流程页也不要做成表单，关键选项可以配插画。
-6. **统一质量线与精度。**
-   - 投入可以有轻重：焦点区使用最好的素材和最多细节。
-   - 任何可见区域都不能低于同一完成度。任何画出来的东西都要达到与整体相同的精度，达不到就换成插画素材，或改用排版与抽象图形表达。
-   - 需要省成本时，在同一设计语言内简化，而不是退回默认组件、浏览器原生样式或占位图。
-7. **先保证阅读与操作。**
-   - 中文正文的字号、行距、对比度、行长和断行要合格。
-   - 情绪由色温、光、材质和动效表达，文字与数字保持清晰。
-   - 不靠极小字号、低对比度或无意义的英文营造高级感。
-   - 图片和纹理不压住正文与点击区域。
-   - 交互状态完整，可用键盘操作，并适配目标宽度。
-8. **默认值必须经过决定。** 模型习惯的字体与配色、组件库样式、浏览器默认的滚动条、焦点环和表单控件，只有在被有意选择后才保留。AI 手搓游戏界面的常见套件也是默认，例如米色纸面配深色石板、红框歪章、小标签、六边形步骤节点、雷达图。把旧的默认风格换成另一种流行风格，同样是默认。
-9. **工程与成本克制。**
-   - 优先复用现有实现、依赖和图形资源。
-   - 生图和素材收集按素材计划进行，不批量生成与构图无关的装饰图。
-   - 不新增重型依赖，不建立独立的资产流水线。
-   - 不把一次美术优化演变为后端或架构重构。
+## Core principles
 
-## 执行流程
+1. **Design for the work, not for the genre.**
+   - First answer: what object or system is this UI inside the story, who made it, who reads it, when.
+   - Then pick one memory point that belongs to this specific work.
+   - Visual identity comes from concrete characters, places, era, factions, events, props. Genre formulas (post-apoc = black/yellow radar; cultivation = ink-green + gold) are only starting points and must be made specific.
+   - Self-test: hand the same genre's generic request to an agent — if it would produce nearly the same UI, the direction is not specific enough.
+   - Compare a few directions internally, deliver exactly one. Do not list options to the user for routine tasks.
+2. **One concept governs every design decision.**
+   - Color comes from materials and light sources; type from writing/printing methods; shape from craft; motion from the object's physical actions.
+   - Related dimensions are decided together, not sequentially ("all colors first, then all fonts" is wrong).
+   - For any element you must be able to state which part of the concept it expresses.
+3. **Concrete art uses illustration assets; code-drawn art is placeholder only.**
+   - People, scenes, objects: final version uses illustration assets. Source order: existing project assets → AI generation → licensed web collection.
+   - CSS/SVG-drawn scenes, people, objects are allowed only for composition/concept validation and must be replaced before delivery (no later than the core-sample stage for complex tasks). They read as programmer-art and drag the whole UI down.
+   - Code owns the interface itself: layout, typography, borders, textures, ornamental patterns, icons, abstract and data graphics.
+4. **Illustration leads the composition.**
+   - The illustration sets the layout's center of gravity; text and components arrange around it. Never shrink it into a top banner or a card thumbnail.
+   - Every main screen must read as a picture: squinting, the screen should be mostly illustration, not dark panels + thin lines + text.
+   - Art presence continues into functional pages (illustration as low-contrast layer under panels, character crossing panel edges, scene shifting with time/location). "Gorgeous opening, then plain dark form pages" is the most common quality collapse.
+   - One hero image per screen. Secondary images blend into the same picture or form a uniformly treated set; never line up differently-sourced images in boxes side by side.
+5. **Information adopts in-world formats, with prop restraint.**
+   - Information uses the world's native formats and vocabulary (ledger columns, roster layout, in-world verbs/nouns) and reveals at narrative pace.
+   - One primary carrier for the whole UI. Do not give every module a different CSS-simulated prop (tape notes, crooked stamps, tags, abacus beads) — stacked props look cheap.
+   - Restrain props and ornaments, not pictures and color. Space freed from props goes to illustration and typography, not to dark text forms.
+   - Not everything is "label: value" + progress bar. Flow pages (onboarding, settings) are not forms; key options can carry illustrations.
+6. **One uniform quality bar.**
+   - Effort may be uneven: the focal area gets the best assets and most detail.
+   - No visible region may fall below the bar. Anything drawn must match overall precision; if it can't, replace with illustration or express it via typography/abstract graphics.
+   - To cut cost, simplify within the same language — never fall back to default components, browser-native styling, or placeholder imagery.
+7. **Reading and operating come first.**
+   - Chinese body text: ≥14px (15–17px typical), line-height 1.6–1.9, line length ~20–40 chars, body contrast ≥4.5:1.
+   - Mood is carried by color temperature, light, material, motion; text and numbers stay crisp.
+   - No tiny text, low contrast, or meaningless English as "premium" shorthand.
+   - Images and textures never sit on top of body text or click targets.
+   - Full interaction states, keyboard operable, adapted to target width.
+8. **Defaults must be chosen, not inherited.** Keep a default font, palette, component-library style, or browser scrollbar/focus-ring only if deliberately selected. The common AI game-UI kit (beige paper + dark slate, red crooked stamp, small tags, hex step nodes, radar chart) is also a default. Swapping one trendy default for another is still a default.
+9. **Engineering restraint.** Reuse existing code, deps, and assets. Generate/collect assets per the asset plan only. No new heavy dependencies, no asset pipeline, no backend refactor.
 
-### 1. 理解场景与任务
+## Execution flow
 
-- 明确以下要素：
-  - 题材。
-  - 人物或世界的特色。
-  - 目标情绪。
-  - 页面用途。
-  - 核心信息与操作。
-  - 目标设备。
-  - 宿主环境，例如是否嵌入聊天消息。
-- 了解现有代码与资源。
-- 用户给出参考时，提炼其中的美术手法，不照搬画面。
-- 没有关键歧义时直接实施。
+### 1. Understand the scene
 
-### 2. 按级别推进
+Confirm: genre; character/world specifics; target mood; page purpose; core info and actions; target device; host environment (e.g. embedded in chat).
+Review existing code and assets. User references: extract the art technique, not the picture. Proceed without asking when no critical ambiguity exists.
 
-复杂任务的六个阶段如下，细节和通过标准见 workflow.md：
+### 2. Set direction (all medium+ tasks)
 
-1. **设计定调**：确定界面身份、记忆点、设计语言、本作品要避开的做法，以及素材计划。
-2. **整体构图**：用真实内容搭出全部主要区域，只解决空间、主次、阅读顺序和关键操作。缩略图中主次不清时，不进入下一步。
-3. **核心样板**：选最能代表作品、也最难的一块，做到交付精度。终版插画素材要生成或收集到位并融入构图；字体、材质、全部交互状态和窄屏适配都要完成。通过后，从成品中提炼可复用的规则，写进设计记录。
-4. **分模块扩展**：每次推进一个模块，经过局部设计、实现、截图，并与样板并排比较，修正后再继续。警惕三种情况：
-   - 新颜色、新圆角逐渐混入。
-   - 各模块变成同一种布局。
-   - 越往后越朴素。
-5. **整体精修**：并排查看全部屏幕，统一光向、线条、材质、画风与字体角色，收口细节，删去无意义的装饰。
-6. **最终验收**：在真实运行环境和目标宽度下，走通主要交互，检查加载失败的兜底和性能。
+Write into the design record:
+- Interface identity: what object/system, made by whom, read by whom.
+- Memory point: one sentence, must come from this work's specifics.
+- Art direction: medium, brushwork, light direction, palette, clarity — one shared style description reused verbatim in every later generation request.
+- Exclusion list: the genre formulas and defaults this work must avoid.
+- Asset plan: every concrete-art item with purpose, ratio, crop, transparency, source (existing → AI → web). Verify sources actually exist before committing; if neither AI nor licensed web assets can support the direction, say so now.
 
-阶段是质量门槛，不是汇报节点：连续推进，不必逐阶段等待用户确认。发现整体性问题时回到对应阶段，只重做受影响的部分。
+### 3. Build
 
-### 3. 制定素材计划
+Per task level:
+- Simple: implement, screenshot, fix worst 1–3 issues, done.
+- Medium: focal area to full quality → complete the page → one combined review pass.
+- Complex: follow the six stages in `workflow.md` (direction → composition → core sample → module-by-module extension → polish → acceptance). Stages are quality gates, not report checkpoints; proceed continuously. On systemic problems, go back to the relevant stage and redo only the affected part.
 
-- 列出界面需要的具象美术：主视觉、人物立绘或头像、场景或背景、关键器物或物品图。每个主要屏幕至少有一个主图层。为每项写明用途、比例、裁切、留白、是否需要透明背景。
-- 为每项确定来源，依次考虑：
-  1. 项目已有资源。
-  2. 环境中**已经具备**的 AI 生图工具。
-  3. 从许可明确的来源网络收集，见 asset-sources.md。
-- 纹理和图标也可以使用素材；版式、边框、装饰纹样和抽象图形由代码实现。
-- 定调时就确定统一的画风方向，包括媒介、笔触、光源方向、色调和清晰度，保证所有素材像出自同一套美术。
-- 素材能否拿到会限制画风。依赖网络收集时，选收集得到的素材能统一支撑的方向，例如古画、版画、纪实摄影。需要专属人物立绘、二次元画风时，通常只能靠 AI 生图；拿不到时尽早说明。
-- 先准备核心样板所需的素材，验证方向后再按模块补充。
+During build:
+- Reuse project code and interaction patterns.
+- Decorative fonts for titles only; verify CJK glyph coverage and set fallback stacks.
+- All states: hover, focus, active, selected, disabled, loading, empty, error — visually consistent.
+- Motion serves interaction and mood; same duration/easing family across the work; respect `prefers-reduced-motion`.
 
-### 4. 生成或收集素材
+### 4. Integrate assets
 
-- 生成要求包括：
-  - 主体。
-  - 风格与材质。
-  - 配色与光源。光源方向与界面保持一致。
-  - 构图与裁切。
-  - 目标比例。
-  - 背景或透明需求。
-  - 为文字与交互预留的空间。
-- 同一作品的所有生成请求复用同一段画风描述，保持画风、光源和色调一致；同一人物在不同图中保持外貌特征一致。每项可以生成几个候选，挑最合适的一张。
-- 让生图负责插画与图形资产，**不要直接生成带有实际文字、按钮的整张 UI 来代替网页**。
-- 网络收集时，按画风和用途找，不先下载再硬凑。逐项核实来源与许可，下载后保存为项目本地资源。
-- 按工具的实际能力执行，不额外安装服务或自建生图框架。不要声称已生成或已获取实际没有的素材。
-- 生图工具不可用、网络上也找不到合适素材时，保留明确标注的占位，交付时列出缺少的素材和对应的生成要求。不要把代码手绘的具象美术当作终版。
+- Place the hero image first, then arrange supporting info.
+- Unify assets via crop, mask, color grading, grain, edge blending, unified light direction; leave quiet zones for text.
+- Mixed-source styles conflict → grade to match; still conflicting → replace, don't force.
+- Assets are local project files, not hotlinked URLs. Honor licenses/attribution.
 
-### 5. 将素材融入界面
+## Visual review (screenshot-based, largest issues first)
 
-- 先让主视觉参与构图，再安排附属信息。
-- 用以下手段统一插画、字体、纹理和组件：
-  - 裁切、遮罩、调色。
-  - 层叠、边缘过渡。
-  - 统一光影与颗粒。
-  - 为文字留白。
-- 收集来的素材和生成的素材画风不一致时，先用统一调色、颗粒和边缘处理拉齐；仍然冲突就替换，不要硬拼。
-- 不同信息可以用不同的表面形式，但不能像从多个美术项目里随意拼来的。
-- 图片作为项目本地资源使用，避免依赖临时链接。外部素材遵守许可与署名要求。
+1. **First glance** (thumbnail, ~1s): where does the eye land; is it the planned focal point; is there something worth remembering.
+2. **Squint**: value structure reads in 2–3 masses; is the screen mostly illustration or mostly dark panels.
+3. **Cover the title**: still recognizable as this work, not any same-genre template.
+4. **Side-by-side**: all regions look like one art direction (light, line, material, palette, type).
+5. **Actual size**: Chinese body text comfortable.
+6. **Edges**: alignment, overflow, browser-native chrome, empty states, no leftover code-drawn art or placeholders.
+7. **Interaction**: states and motion.
+8. **Target width**: narrow/embedded layout.
 
-### 6. 实现
+Fix priority: direction > composition > core art > consistency > readability > detail. Fix only the top 1–3 issues per round; re-screenshot after each round. Max two rounds per stage; keep a rollback point before each fix session.
 
-- 复用项目现有的代码与交互模式。
-- 装饰字体主要用于标题；确认中文字形覆盖，并设置后备字体。
-- 点击、切换、展开、选中、加载、禁用、空状态都要有清楚且风格一致的反馈。
-- 动效服从交互与故事氛围。
+Diagnose the cause class before fixing: missing core art / weak concept identity / weak composition hierarchy / style conflict / readability or layout error. Each has a different fix.
 
-## 视觉复查
+If the main model cannot see images, reuse an existing vision tool or delegate review to a vision-capable subagent. Report only what was actually verified.
 
-复查基于实际渲染的截图，从大到小检查：
+## Acceptance checklist (all must be yes)
 
-1. **第一眼**：焦点与记忆点在哪里。
-2. **眯眼或缩小**：明暗主次是否清楚；画面主要由插画构成，还是只剩深色面板与文字。
-3. **遮住标题**：遮住后，是否仍能认出是这部作品。
-4. **并排比较**：各区域是否像同一套美术。
-5. **原尺寸**：中文阅读是否舒适。
-6. **边缘与收口**：对齐、溢出、浏览器默认外观、空状态，以及代码手绘的具象美术或占位素材是否已替换。
-7. **实际操作**：交互状态与动效。
-8. **目标宽度**：窄屏或嵌入宽度下的表现。
+1. Is there a memorable first-glance element that comes from this work's own content?
+2. With the title covered, would this UI still not be confusable with a same-genre template?
+3. Does the most important visual area use illustration assets at a precision matching its status — no code-drawn figures, no obviously cruder element in frame?
+4. Do assets, type, components, and background read as one production? Is the plainest region still pictorial and on the same quality bar?
+5. Is the page clear, operable, adapted to target width, with function never sacrificed to visuals?
 
-**修正的优先顺序**：方向 > 构图 > 核心美术 > 一致性 > 可读性 > 细节。
+## Delivery
 
-- 每轮只修最影响观感的 1～3 项，修完重新截图。
-- 每个阶段最多两轮。修改前保留可回退的状态，结果变差时回滚。
-
-**区分问题来源**：核心美术缺失、概念辨识度不足、构图层级不足、美术风格冲突、可读性或布局错误，分别对应不同的修法。
-
-**主模型不能看图时**：可以复用已有视觉工具，或交给有视觉能力的子代理审查。无法查看图片时，只报告实际验证过的部分。
-
-## 完成前判断
-
-1. 第一眼有什么值得记住？它是否来自这部作品独有的内容？
-2. 遮住标题后，这个界面是否仍不像任何同题材模板？
-3. 最重要的视觉区域，是否使用了与其地位相称的插画素材，而不是代码手绘或开发占位？画面里有没有精度明显低于整体的元素？
-4. 素材、字体、组件与背景是否像出自同一套作品？最朴素的那个区域，是否仍有画面、仍在同一质量线上？
-5. 页面是否清晰、可操作、适配目标宽度？有没有为了视觉效果牺牲功能？
-
-## 交付
-
-- 优先交付可运行的成果。
-- 复杂任务简述以下内容：
-  - 核心美术概念。
-  - 实际使用的生成素材或外部素材，以及必要的许可说明。
-  - 复查中做出的主要修正。
-  - 验证结果。
-  - 未完成或未验证的部分，包括仍为占位的素材。
-- 简单任务只说明关键改动。
-- 不输出冗长的设计文档。设计记录只用于跨阶段、跨会话保持设计意图。
+- Deliver runnable results first.
+- Complex tasks: briefly state core art concept, assets actually used (with license notes), main fixes made during review, verification results, and anything still placeholder.
+- Simple tasks: state key changes only.
+- No long design documents to the user. The design record exists for cross-stage/cross-session continuity, not as a user report.

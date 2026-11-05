@@ -1,35 +1,35 @@
-# 素材来源
+# Asset sources
 
-需要网络收集素材时读取。先检查项目已有资产；生图工具可用时，作品专属的人物和场景优先生成。收集时针对素材计划中的具体缺口，选 1～2 个最匹配的来源少量检索，不要逐个访问这里的网站。
+Read when collecting assets online. First check project assets; when an AI image tool is available, work-specific characters and scenes are best generated. Collect for specific gaps in the asset plan, from 1–2 best-matching sources below — don't crawl every site.
 
-## 插画与图像
+## Illustration & imagery
 
-| 来源 | 适用素材 | 许可要点 |
+| Source | Good for | License notes |
 | --- | --- | --- |
-| [The Met Open Access](https://www.metmuseum.org/policies/image-resources) | 中国书画、浮世绘、西洋绘画、古地图、器物照片 | 标有 CC0 的公有领域作品可自由使用，包括商用；不带 CC0 标记的作品不可用 |
-| [台北故宫开放资料](https://theme.npm.edu.tw/opendata/index.aspx?lang=2) | 中国书画、器物、纹样 | 低分辨率图像为 CC0，高分辨率图像为 CC BY 4.0，需按其要求的格式署名 |
-| [Smithsonian Open Access](https://www.si.edu/openaccess) | 历史照片、版画、地图、器物、自然标本 | 标为 Open Access 的条目为 CC0 |
-| [Wikimedia Commons](https://commons.wikimedia.org/) | 历史图像、照片、古画 | 许可逐个文件不同，以文件页面为准 |
-| [Unsplash](https://unsplash.com/) | 现实题材的场景照片、街景、室内、物件 | 免费图片按 Unsplash License 使用；注意商标、人物肖像等额外权利，区分付费的 Unsplash+ |
-| [Openverse](https://openverse.org/) | 搜索开放许可图片 | 聚合搜索不是统一授权；逐项查看原站许可及署名、相同方式共享要求 |
+| [The Met Open Access](https://www.metmuseum.org/policies/image-resources) | Chinese paintings, ukiyo-e, Western paintings, old maps, object photos | Works tagged CC0 are public domain, commercial use OK; untagged works are off-limits |
+| [National Palace Museum Open Data](https://theme.npm.edu.tw/opendata/index.aspx?lang=2) | Chinese paintings, objects, patterns | Low-res images CC0; high-res CC BY 4.0 with required attribution format |
+| [Smithsonian Open Access](https://www.si.edu/openaccess) | Historical photos, prints, maps, objects, specimens | Items marked Open Access are CC0 |
+| [Wikimedia Commons](https://commons.wikimedia.org/) | Historical images, photos, old paintings | Per-file licenses; check the file page |
+| [Unsplash](https://unsplash.com/) | Realistic scenes, streets, interiors, objects | Unsplash License; watch trademark/portrait rights; Unsplash+ is paid |
+| [Openverse](https://openverse.org/) | Open-license image search | Aggregator, not a license; verify at the origin site (attribution, share-alike) |
 
-公有领域的古画和历史照片适合古风、历史、民国、蒸汽时代等题材。做背景、场景和器物时，可以通过裁切、调色和局部取用，融入作品的画风。
+Public-domain old paintings and historical photos suit historical/period settings. Crop, grade, and take partial regions to merge them into the work's style.
 
-二次元风格的人物立绘与场景，网络上很少有许可明确的素材。插画网站和社交平台上的作品默认受版权保护，未经作者授权不使用。这类素材优先用 AI 生图，或使用项目已有、用户提供的素材。
+Anime-style character art with clear licenses is rarely available online. Works on illustration sites and social platforms are copyrighted by default — do not use without the author's permission. Prefer AI generation or user/project-provided assets for this style.
 
-## 纹理、图标与字体
+## Textures, icons & fonts
 
-| 来源 | 适用素材 | 许可要点 |
+| Source | Good for | License notes |
 | --- | --- | --- |
-| [Poly Haven Textures](https://polyhaven.com/textures) | 金属、纸面感、石材、墙面、木材等纹理 | 站内自有资产为 CC0；按需使用低分辨率版本，避免无意义的 4K/8K 贴图 |
-| [Game-icons.net](https://game-icons.net/) | 技能、状态、道具、武器图标（SVG） | 多数为 CC BY 3.0，须保留作者署名；个别为公有领域，逐项核对。风格偏游戏化，和照片或古画放在一起通常不协调 |
-| [Kenney](https://kenney.nl/assets) | 游戏 UI 图形包、通用游戏素材 | 资产页面的游戏素材通常为 CC0；以目标资产页及压缩包内的许可为准 |
-| [Google Fonts](https://fonts.google.com/) | 中文及英文字体 | 按字体查看许可证与中文字形覆盖。中文字体文件较大，注意加载量与后备字体 |
+| [Poly Haven Textures](https://polyhaven.com/textures) | Metal, paper feel, stone, walls, wood | In-house assets CC0; use the resolution you need, skip gratuitous 4K/8K |
+| [Game-icons.net](https://game-icons.net/) | Skill/status/item/weapon icons (SVG) | Mostly CC BY 3.0 with attribution required; some public domain — check per item. Style reads game-y and clashes with photos/old paintings |
+| [Kenney](https://kenney.nl/assets) | Game UI packs, generic assets | Usually CC0 per asset page / bundled license |
+| [Google Fonts](https://fonts.google.com/) | CJK & Latin fonts | Check license and CJK coverage per family; CJK files are large — mind payload and fallbacks |
 
-## 选用和落地
+## Selection & landing
 
-1. 按素材计划中的画风描述和用途找素材：主体、年代感、媒介、线条复杂度、配色与光源。不要先下载再强行适配。
-2. 核实具体文件的来源、许可和必要署名，不把搜索预览图当作可随意使用的原素材。许可不确定就放弃。
-3. 按用途裁切、压缩、调色，统一清晰度、颗粒与光影，保存到项目现有的资产路径。避免第三方临时 URL 热链。
-4. 优先使用 WebP、SVG 等合适格式，避免把大图塞进小图标位。许可需要署名时，记录在项目已有的说明或简短的素材说明中。
-5. 找不到画风匹配、许可明确的素材时，按主 Skill 的规则使用现有 AI 生图工具。也不可行时，保留标注清楚的占位并在交付中说明。不要用代码手绘代替，也不要杜撰已获取或已生成的素材。
+1. Search by the asset plan's style description and purpose: subject, period feel, medium, line complexity, palette, light. Never download first and force-fit later.
+2. Verify each file's source, license, and required attribution. Search thumbnails are not usable originals. Uncertain license → drop it.
+3. Crop, compress, grade per use; unify sharpness, grain, light; save into the project's existing asset path. No hotlinked third-party URLs.
+4. Prefer WebP/SVG; don't put large images in small icon slots. Record attribution where required, in the project's existing notes or a short asset readme.
+5. If nothing matches with a clear license, use the AI generation tools already available in the environment. If that's also infeasible, keep a clearly labeled placeholder and say so in delivery. Never substitute code-drawn art, and never claim assets were generated or obtained when they weren't.

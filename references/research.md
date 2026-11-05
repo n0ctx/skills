@@ -1,277 +1,109 @@
-# 设计研究资料
+# Research basis
 
-本文记录 Skill 中设计原则的依据与适用范围。执行设计任务时不需要阅读。只在需要判断某条规则从何而来、是否适用于当前作品，或需要补充研究时查阅。
+Evidence and limitations behind this skill. Not needed for execution; consult only to judge where a rule comes from or whether it applies to a given work.
 
-研究时间：2026 年 10 月。
+Research period: October 2026.
 
-## 1. 范围与局限
+## 1. Scope & limitations
 
-**来源**：
+**Sources**: open-source front-end cards and status bars on GitHub; Bilibili card showcase/tutorial videos (frame-by-frame review); JS-Slash-Runner docs and source; English communities (GitHub, Chub, SillyTavern docs); narrative-game UI design talks/interviews; comparable AI design skills; art-production process material.
 
-- GitHub 上的开源前端卡与状态栏。
-- B 站前端卡展示与教程视频，研究时逐帧查看了录屏。
-- 酒馆助手（JS-Slash-Runner）文档与源码。
-- 英文社区：GitHub、Chub、SillyTavern 文档。
-- 叙事游戏的界面设计访谈与演讲。
-- 同类 AI 设计 Skill。
-- 美术制作流程的资料。
+**Biggest limitation**: the community-acknowledged polished cards live in closed Discord communities (Leinaal, Journey) inaccessible at research time; Reddit, Game UI Database, Tieba, Zhihu, Xiaohongshu also inaccessible.
 
-**最大局限**：
+**Consequence**: no polished-card benchmark exists here; public samples informed only medium constraints, common failure modes, and isolated borrowable techniques. "Polished" standards in this skill are reasoned inference from transferable professional method and counter-examples, not direct observation of polished cards. If polished card files/recordings/author notes become available, add them and re-review §2.
 
-- 社区公认的精品前端卡主要在类脑、旅程等 Discord 社区发布和讨论，无法公开访问。Reddit、Game UI Database、贴吧、知乎、小红书在研究时也无法访问。
-- 公开渠道找到的作品经审阅确认都不属于精品卡。
+## 2. Main conclusions
 
-**由此带来的结果**：
+What separates narrative UI from ordinary web UI, with evidence:
 
-- 本文没有可作为标杆的精品案例。
-- 公开样本只用于观察媒介约束、常见问题和个别值得借鉴的局部手法。
-- Skill 中关于"精品级"的标准，主要来自可迁移的专业方法、反例对照与推理，属于有依据的归纳，而不是对精品卡的直接观察。
+1. **The interface has an identity** — an object or system in the story; color/type/layout/components derive from it. (Fagerholt & Lorentzen's UI taxonomy; the Suzerain card's dossier concept, §3.) → design-knowledge §1.1–1.2.
+2. **Information has native formats and reveal pacing** — ledgers, rosters, hexagrams, torn pages; locked/sealed states as narrative. (Disco Elysium thought cabinet face-down; Inscryption symbols + rulebook.) → §1.3.
+3. **Text has a voice** — fonts and action vocabulary show "who wrote this." (Pentiment per-class scripts; Suzerain card's "open the dossier / archive / destroy" buttons.) → §1.4, §2.2.
+4. **Mood and state drive visual change while information stays legible.** (Her Story lighting; Fagerholt on sensory feedback; Tavo weather status bar day/night palettes.) → §1.5.
+5. **Persistent across a conversation, works in narrow widths, repeated renders, streaming output.** (JS-Slash-Runner docs/source; community complaints about "UI only at the opening.") → §6.
+6. **Finish comes from a uniform quality bar and staged polish, not one-shot coverage.** (Art-production literature; first-screen-gorgeous/functional-pages-plain counter-cases.) → workflow.md.
+7. **Concrete art depends on illustration assets; element precision matters more than idea count.** (Best-looking public-sample parts were all illustration; generation tests in §8.) → SKILL.md principles 3/6; design-knowledge §2.5, §7, §8.
 
-**后续补充**：如果获得精品卡的卡文件、录屏或作者说明，应优先补充进第 3 节，并复核第 2 节的结论。
+## 3. Public-sample observations (not polished benchmarks)
 
-## 2. 主要结论
+Descriptions are from actually viewed frames/screenshots. Open-source samples rendered in a local simulated environment with empty/default data, not real play.
 
-叙事界面与普通网页的实质区别，归纳为六点。每点后面写明证据来源。
+**Suzerain V0.54 (author: Beitiao)** — bilibili.com/video/BV1xq8b6vEEH. Political, adapted from the game; ~15k plays, praised as "very finished." Strengths: the whole UI is a classified presidential dossier — wine-red cover, gold serif titles, "open the dossier" button, tabbed dossier inside; finance page as a ledger; personnel page with portraits; in-world action verbs; per-event-type styles; help/index pages. Weaknesses: small dense table text, host-default dark body, mobile unverified.
 
-1. **界面有身份**：它是故事中的物件或系统，颜色、字体、版式、组件都由这个身份推出。
-   - 证据：Fagerholt 与 Lorentzon 的界面分类研究；Suzerain 改编卡的档案册概念（第 3 节）。
-   - 落地：design-knowledge.md 1.1、1.2。
-2. **信息有原生形态和揭示节奏**：账本、名册、卦象、残页，以及未解锁、待揭晓等状态。
-   - 证据：Disco Elysium 思想柜"背面朝上"的设计；Inscryption 用符号加规则书承载规则。
-   - 落地：design-knowledge.md 1.3。
-3. **文字有声音**：字体、文案和动作词汇表达"谁写的"。
-   - 证据：Pentiment 为不同阶层与文化定制字体；Suzerain 卡的"翻开档案""归档保存""销毁文书"等按钮。
-   - 落地：design-knowledge.md 1.4、2.2。
-4. **情绪与状态驱动视觉变化**，信息本身保持清晰。
-   - 证据：Her Story 的灯光随片段情绪变化；Fagerholt 论文对感官型反馈的讨论；Tavo 天气状态栏的昼夜配色。
-   - 落地：design-knowledge.md 1.5。
-5. **在对话中持续存在**，在窄宽度、重复渲染、非流式渲染的环境中工作。
-   - 证据：酒馆助手文档与源码；社区对"只有开场有 UI"的抱怨。
-   - 落地：design-knowledge.md 6。
-6. **完成度来自统一质量线和分阶段打磨**，而不是一次铺开。
-   - 证据：美术制作流程资料；反例中"首屏精致、功能页退化"的落差。
-   - 落地：workflow.md。
-7. **具象美术依赖插画素材，精度比点子数量更决定观感。**
-   - 证据：公开样本中观感最好的部分都来自插画，例如修仙卡的水墨标题页；第 8 节的实际生成测试。
-   - 落地：SKILL.md 核心原则 3、6；design-knowledge.md 2.5、第 7 节、第 8 节。
+**A Record of a Mortal's Journey (author: KAI)** — bilibili.com/video/BV1jV5u6xEWV. ~34k plays ("is this even SillyTavern"). Strengths: title screen = full-screen ink landscape + figure illustration with gold calligraphy title, reads like a standalone game. Weaknesses: art vanishes entirely in character-creation and play pages — dark base, small text, stroked boxes, empty cells; huge opening-vs-functional gap.
 
-## 3. 公开样本观察（非精品标杆）
+**Tavo floating weather status bar** — bilibili.com/video/BV1cAUjBKEcW. ~30k plays. Strengths: palette follows in-story time/weather (sakura-purple day, deep-blue night with moon). Weaknesses: structure still avatar + progress bars + text blocks; comment concern about context consumption.
 
-画面描述来自研究中实际查看过的视频帧或截图。标"模拟环境"的开源样本是在本地模拟的运行环境中渲染的，使用空数据或默认数据，不等于真实游玩画面。
+**Status-bar restyle showcase** — bilibili.com/video/BV1qXzsbEzU. Three panels identical in skeleton (level, four stat bars, skill tags), palette-only differentiation, one neon-gradient — the canonical "recolor, not restructure" failure.
 
-### 中文社区录屏样本
+**Community comments**: UI only at the opening, nothing after choices (BV1D4QUBSEVr comments); context-consumption and platform-compatibility worries; a hiring post demanding cards that "look good AND look different from each other" (v2ex.com/t/1239036).
 
-**Suzerain V0.54（作者：北眺）**
+**Open-source samples (GitHub, low-star)**: matrix4033/tavern-status-bars — six different components, one card style (1px border, 8px radius, blur), no genre material, empty data → whole block vanishes. QINMO7557/young-marcus-ui — kraft paper/tape/paper clips via CSS vars + pseudo-elements, handwriting font loaded separately, pinned asset versions; but schedule region shows empty lines + "no records", no designed empty state. feihu-lgtm/watchdogs-london — near-black + single accent, self-hosted fonts with license text, reduced-motion support, narrow breakpoints, commit history shows orientation-reflow and font lazy-load fixes. yjlovegy/xinyuanshe-card — loading shell before data ready with timeout prompt; old messages render read-only snapshots. EnitiyFiaz/jiugui-card — mobile floating-window positioning, dynamic viewport units, safe areas, cache fallbacks in commit history. Common pattern: commits cluster around release/logic, little record of visual polish.
 
-- 来源：https://www.bilibili.com/video/BV1xq8b6vEEH，录屏。
-- 题材：政治题材，改编自同名游戏。
-- 人气：约 1.5 万播放、600 余收藏。热评称"完成度很高"。
-- 可取之处：
-  - 整个界面就是总统府机密档案：酒红封面配金色衬线标题，按钮是"翻开档案"，打开后是带页签的档案册。
-  - 财政页做成账本式收支表，人事页附人像。
-  - 按钮使用世界动词，例如"归档保存""销毁文书"。
-  - 作者说明里提到，不同类型的事件（聊天、收发文件、签署命令）使用不同样式；另有帮助与索引页。
-- 问题：
-  - 面板文字过小，表格密度高。
-  - 正文区仍是宿主默认暗底。
-  - 移动端表现未验证。
+**English community**: few in-card custom UIs; mainstream = per-turn improvised HTML (e.g. Stab's EDH Visual Toolkit, github.com/Zorgonatis/Stabs-EDH) or SillyTavern theming. Improvised generation produced wildly divergent panel languages within one work (pink slash labels + green terminal panels) — no persistent direction. Medium constraints: few Chub cards carry HTML tags; SillyTavern sanitizes message HTML; card regex needs user approval.
 
-**凡人修仙传（作者：KAI）**
+## 4. Transferable methods from narrative games
 
-- 来源：https://www.bilibili.com/video/BV1jV5u6xEWV，第三方试玩录屏。
-- 人气：约 3.4 万播放。热评"这还是酒馆么"。
-- 可取之处：标题页是满屏水墨山水和人物插画，配金色书法标题，整体像独立游戏。
-- 问题：
-  - 进入建卡页和游戏页后，插画完全消失，退回深色底、小字号、描边方块和大量空格子。
-  - 首屏和功能页的完成度落差很大。
-
-**Tavo 悬浮天气状态栏**
-
-- 来源：https://www.bilibili.com/video/BV1cAUjBKEcW，录屏。
-- 人气：约 3 万播放。
-- 可取之处：面板配色随剧情中的时间和天气变化，白天偏樱紫，夜晚偏深蓝，带月亮。
-- 问题：
-  - 结构仍是"头像、进度条、文字块"，文字量大。
-  - 评论担心上下文消耗。
-
-**状态栏美化展示**
-
-- 来源：https://www.bilibili.com/video/BV1qXzsBaEzU，录屏。
-- 问题：三套面板骨架完全相同，都是等级、四项属性条加技能标签，只换了配色，其中一套是霓虹渐变。这是"换色不换结构"的典型反例。
-
-**社区评价**（均为评论或帖子）：
-
-- 只有开场有界面，选择之后再无界面（BV1D4QUBSEVr 评论区）。
-- 对上下文消耗和平台兼容性的担心。
-- 招聘帖要求"既要好看，也要不同的卡看起来不一样"（https://www.v2ex.com/t/1239036）。
-
-### 开源样本（GitHub，均为低星项目）
-
-**matrix4033/tavern-status-bars**
-
-- 来源：源码，模拟环境。
-- 问题：六个功能不同的组件使用同一种卡片（1px 边框、8px 圆角、模糊背景），没有题材材质；数据为空时整块消失。
-
-**QINMO7557/young-marcus-ui**
-
-- 来源：源码，模拟环境。
-- 可取之处：牛皮纸、胶带、回形针用 CSS 变量加伪元素实现，手写字体单独加载，素材引用固定版本号。
-- 问题：日程区在没有数据时只有空横线和"暂无记录"，空状态没有设计。
-
-**feihu-lgtm/watchdogs-london**
-
-- 来源：作者截图、源码、提交记录。
-- 可取之处：
-  - 近黑底配单一强调色。
-  - 字体自托管，附授权文本。
-  - 支持减少动态偏好，有窄屏断点。
-  - 提交记录中有转屏重排和字体按需加载的修复。
-
-**yjlovegy/xinyuanshe-card**
-
-- 来源：源码。
-- 可取之处：数据未就绪时先显示加载外壳，超时后提示；旧消息中的界面按只读快照渲染。
-
-**EnitiyFiaz/jiugui-card**
-
-- 来源：提交记录。
-- 可取之处：有手机端的悬浮窗定位、动态视口单位与安全区、缓存回退等修复记录，说明作者确实在手机端做了适配。
-
-**开源样本的共同情况**：多数仓库的提交集中在发布和逻辑层面，看不到视觉打磨的记录。
-
-### 英文社区
-
-- 英文社区少有卡内定制界面，主流做法有两种：
-  - 让模型每轮即兴生成 HTML，例如 Stab's EDH 的 Visual Toolkit（https://github.com/Zorgonatis/Stabs-EDH）。
-  - 修改 SillyTavern 自身主题。
-- 即兴生成方式在同一作品的不同消息里出现了截然不同的面板语言，例如粉色斜切标签与绿色终端面板并存，缺少持久的美术方向。
-- 与媒介相关的约束：
-  - Chub 带 HTML 标签的卡很少（https://chub.ai/search?topics=html）。
-  - SillyTavern 会清理消息中的 HTML（https://docs.sillytavern.app/for-contributors/writing-extensions/）。
-  - 卡内正则需要用户批准才能导入（https://docs.sillytavern.app/extensions/regex/）。
-
-## 4. 叙事游戏界面的可迁移方法
-
-| 方法 | 出处 | 迁移要点 |
+| Method | Source | Migration |
 | --- | --- | --- |
-| 按"是否属于虚构世界"和"是否存在于空间中"给界面分类；完全融入世界不必然更沉浸；写实世界对界面逻辑要求更高；叙事为主时可接受歧义，快速决策时需要清晰 | Fagerholt & Lorentzon, *Beyond the HUD*（2009），https://publications.lib.chalmers.se/records/fulltext/111921.pdf | 先定界面身份；融合深度随任务变化 |
-| 先定主色，再定标志与关键字体，最后定副色，副色极少；界面同时承担"为作品包装"的作用；菜单用线条引导视线，重要区域亮、次要区域暗；每个菜单都有即时动画 | Persona 5 界面设计访谈与演讲（转译）：https://personacentral.com/persona-5-panel-concept-development-ui/ 、https://personacentral.com/persona-5-interview-ui-design-sound-music/ | 色彩决策顺序；强调色预算；即时反馈 |
-| 为不同文化和阶层的人物定制字体，文字逐笔书写；同时承认难读的字体不适合大量文本的游戏 | Pentiment 演讲报道：https://www.gamedeveloper.com/design/pentiment-director-explains-how-going-all-in-on-fonts-helped-elevate-the-medieval-detective-rpg- | 字体即声音；装饰字体只用于短文本 |
-| 统一的操作系统外壳中，各个网页内页风格迥异 | Hypnospace Outlaw 访谈：https://filmstories.co.uk/gaming/hypnospace-outlaw-the-indie-game-that-simulates-the-90s-web/ | 外壳统一，内页随作者与内容变化 |
-| 宁可更风格化、更易辨认；用描边保证边界可读；抑制动态画面中的抖动噪点 | Return of the Obra Dinn 开发日志：https://dukope.com/devlogs/obra-dinn/tig-00/ | 风格强度不能压过可读性 |
-| 用有清晰隐喻的符号替代文字说明，规则书中埋藏叙事线索 | Inscryption 演讲报道：https://www.gamedeveloper.com/marketing/-i-inscryption-s-i-journey-from-game-jam-joint-to-cult-classic | 符号配图例，图例本身也可以叙事 |
-| 思想先"背面朝上"、只露名字，内化后才揭晓；同时因颜色无图例、小字难读而被无障碍评测批评 | Disco Elysium：https://www.gamebanshee.com/news/122863-disco-elysium-introducing-the-thought-cabinet.html ；评测：https://caniplaythat.com/2021/03/31/disco-elysium-the-final-cut-can-i-play-that-accessibility-review/ | 揭示节奏；风格不能牺牲可读性 |
-| 骰子代表精力，时钟代表进度，用抽象符号而不是拟真；强调色只给可选项 | Citizen Sleeper 访谈：https://oldmenrunningtheworld.com/an-interview-with-citizen-sleeper-creator-gareth-damian-martin/ | 资源符号化；强调色只给可操作项 |
-| 环境灯光随片段情绪变化；整个界面是一台可信的旧警局电脑，只保留一处有意的不真实 | Her Story 访谈：https://www.vice.com/en/article/watching-as-detectives-the-truth-behind-her-story-400/ | 情绪走感官通道；一处有意的不真实 |
+| Classify UI by "in fiction? in space?"; full diegesis not always more immersive; realistic worlds demand stricter logic; narrative tolerates ambiguity, fast decisions need clarity | Fagerholt & Lorentzon, *Beyond the HUD* (2009), publications.lib.chalmers.se/records/fulltext/111921.pdf | Interface identity first; fusion depth varies by task |
+| Primary color → marks/key fonts → few functional secondaries; menus lead the eye with lines; bright primary, dark secondary; every menu animates instantly | Persona 5 UI interviews (personacentral.com) | Color decision order; accent budget; instant feedback |
+| Per-culture/class custom scripts, written stroke by stroke; hard fonts unsuitable for heavy text admitted | Pentiment (gamedeveloper.com) | Type as voice; decorative type for short text only |
+| Unified OS shell, wildly varied inner pages | Hypnospace Outlaw (filmstories.co.uk) | Unified shell, content-driven inner pages |
+| Prefer stylization + legibility; outlines for readable edges; suppress flicker/noise | Return of the Obra Dinn devlog (dukope.com) | Style must not beat legibility |
+| Clear-metaphor symbols replace text; rulebook hides narrative clues | Inscryption (gamedeveloper.com) | Symbols + legend; legend can narrate |
+| Thoughts face-down by name only; reveal after internalizing; critiqued for color-blindness and small text | Disco Elysium (gamebanshee.com; caniplaythat.com accessibility review) | Reveal pacing; style never beats legibility |
+| Dice = energy, clocks = progress, abstract not skeuomorphic; accent only on options | Citizen Sleeper (oldmenrunningtheworld.com) | Symbolized resources; accent on operables only |
+| Lighting follows clip mood; whole UI a credible old police PC with one deliberate unreality | Her Story (vice.com) | Mood on sensory channel; one deliberate unreality |
 
-Persona 5 的资料是日文媒体的英文转译，不是逐字引文。
+Persona 5 material is English translation of Japanese media, not verbatim quotes.
 
-## 5. AI 生成界面的同质化
+## 5. Homogenization of AI-generated UI
 
-- **成因**：模型落在训练数据的统计中心，Anthropic 称之为 distributional convergence。禁用某种字体或配色后，模型会转向另一个局部最优，例如禁用 Inter 后转向 Space Grotesk。
-  - https://claude.com/resources/articles/improving-frontend-design-through-skills
-- **Anthropic 官方前端设计 Skill 的演变**：从"选一个极端风格、禁用特定字体"，改为列出 AI 默认风格簇，并用"相似提示是否得到相同结果"自检。
-  - https://github.com/anthropics/skills/blob/main/skills/frontend-design/SKILL.md
-- **修复清单本身会变成新套路**，例如"奶油底、衬线、陶土色"。因此应教判断过程，而不是给替代清单。
-  - taste-skill：https://github.com/Leonxlnx/taste-skill
-- **NN/g 的测试**：多种 AI 原型工具的输出外观相似、扁平、可互换，缺少层级与分组。
-  - https://www.nngroup.com/articles/ai-prototyping/
-- **从构图而不是组件开始**；去掉边框、阴影、圆角后不影响理解的内容，就不该做成卡片。这是摘要转述。
-  - https://developers.openai.com/blog/designing-delightful-frontends-with-gpt-5-4
-- **未经主题化的浏览器默认表面**，例如滚动条、焦点环、选中色，是界面被"拼装"而非"建造"的明显信号；不要把一个角落打磨到完美而让其余部分低于同一质量线。
-  - Impeccable：https://github.com/pbakaus/impeccable
+- Models land on training-data statistical centers (Anthropic: distributional convergence); banning one font/palette shifts to another local optimum (Inter → Space Grotesk). claude.com/resources/articles/improving-frontend-design-through-skills
+- Anthropic's official frontend-design skill evolved from "pick an extreme style, ban specific fonts" to listing AI-default style clusters + similar-prompt self-test. github.com/anthropics/skills
+- Fix-lists become new kits ("cream base, serif, terracotta") — teach judgment, not replacement lists. github.com/Leonxlnx/taste-skill
+- NN/g: multi-tool AI prototypes look similar, flat, interchangeable. nngroup.com/articles/ai-prototyping/
+- Start from composition, not components; content that survives removing borders/shadows/radius shouldn't be a card (paraphrase). developers.openai.com/blog/designing-delightful-frontends-with-gpt-5-4
+- Unthemed browser-default surfaces (scrollbars, focus rings, selection color) signal assembly over building; don't perfect one corner while the rest sits below the bar. github.com/pbakaus/impeccable
 
-## 6. 制作与打磨方法
+## 6. Production & polish method
 
-| 方法 | 出处 | 在 Skill 中的形式 |
+| Method | Source | Form in this skill |
 | --- | --- | --- |
-| 美术方向需要共享参照，否则每个人会退回自己的风格 | https://www.gamedeveloper.com/art/five-secrets-of-game-art-direction | 设计记录、统一质量线 |
-| "Beautiful corner"：先把一小块做到成品质量，用来验证方向 | https://www.ryantreadwell.com/post/beautiful-corners | 核心样板阶段 |
-| 灰盒、美术化、打磨分阶段推进；把全部组件并排检查一致性；精力按重要性分配 | https://book.leveldesignbook.com/process/env-art | 整体构图阶段、并排比较、统一质量线 |
-| 原型、alpha、beta 分阶段，每阶段有不同的完成标准 | https://gameworldobserver.com/2023/11/22/game-production-stages-prototype-alpha-beta-ship-tim-cain | 阶段门槛 |
-| 从已经做完的资产中提炼规则，而不是先写规则再做资产 | https://blog.makko.ai/art-bible-game-development/ ；https://designcaitlin.substack.com/p/how-to-write-a-ui-art-bible | 样板通过后才写设计语言规则 |
-| 独立评审者对照固定标准评分，自评容易偏宽；评分措辞会影响输出风格；中间轮可能优于最终轮，需要保留快照以便回滚 | https://www.anthropic.com/engineering/harness-design-long-running-apps | 最终验收的独立评审、复查时保留可回退状态 |
-| Agent 容易一次做太多，或看到已有进展就宣告完成；需要逐项推进并端到端验证 | https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents | 分模块扩展、真实环境验收 |
-| 同一问题纠正两次仍失败时，应重新开始，而不是继续叠加修正 | https://code.claude.com/docs/en/best-practices | 回退规则 |
+| Shared art-direction reference or everyone reverts to their own style | gamedeveloper.com/art/five-secrets-of-game-art-direction | Design record, uniform quality bar |
+| "Beautiful corner": finish one small block to production to prove direction | ryantreadwell.com/post/beautiful-corners | Core-sample stage |
+| Graybox → art pass → polish; check all components side by side; effort by importance | book.leveldesignbook.com/process/env-art | Composition stage; side-by-side; quality bar |
+| Prototype/alpha/beta with per-stage finish bars | gameworldobserver.com (Tim Cain) | Stage gates |
+| Extract rules from finished assets, not vice versa | blog.makko.ai; designcaitlin.substack.com (UI art bible) | Registry written only after sample passes |
+| Independent reviewers against fixed criteria beat self-review; scoring wording shapes output; middle rounds may beat finals — keep snapshots | anthropic.com/engineering/harness-design-long-running-apps | Independent acceptance review; rollback points |
+| Agents over-reach or declare done on partial progress; step module by module, verify end to end | anthropic.com/engineering/effective-harnesses-for-long-running-agents | Module-by-module; real-environment acceptance |
+| Same issue failing twice → restart, don't stack fixes | code.claude.com/docs/en/best-practices | Rollback rules |
 
-## 7. 媒介约束（酒馆助手环境）
+## 7. Medium constraints (JS-Slash-Runner)
 
-来源：酒馆助手文档 https://n0vi028.github.io/JS-Slash-Runner-Doc/ 与源码 https://github.com/N0VI028/JS-Slash-Runner 。
+From n0vi028.github.io/JS-Slash-Runner-Doc/ and github.com/N0VI028/JS-Slash-Runner.
 
-**渲染方式**：
+- UIs render as isolated embedded pages per chat floor; `vh`/`vw` mostly measure the iframe, not the window.
+- Iframe height auto-follows `body` content; viewport/parent-height coupling causes mutual blow-up. Community agent guidance: avoid `vh`; use width + `aspect-ratio`; avoid absolute-positioned main bodies; no horizontal scroll. (github.com/StageDog/tavern_helper_template)
+- Render depth hides old floors; other HTML-injection plugins may duplicate UIs; more code = more jank — author recommends load links only in floors.
+- Streaming: UIs render after text finishes.
+- Assets/fonts commonly via jsDelivr mirrors (cache lag) and online font services.
+- Community template skills cover engineering/adaptation only — little design guidance; example styles invite copying (inferred convergence).
 
-- 界面在聊天楼层中以独立内嵌页渲染。
-- 除个别情况外，`vh`、`vw` 以该内嵌页为基准，不是浏览器窗口。
+## 8. Generation tests
 
-**高度**：
+**Setup**: October 2026, one model, two genres (cyberpunk underground clinic; cultivation outer-disciple), two skill versions each, no image tool, external images banned — all art CSS/SVG.
 
-- 内嵌页高度跟随 `body` 的内容高度自动调整。
-- 依赖视口或父级高度的写法会互相撑高。
-- 社区模板的 Agent 指引建议：
-  - 避免 `vh`。
-  - 用宽度加 `aspect-ratio` 控制比例。
-  - 主体不用绝对定位。
-  - 适配容器宽度，不出现横向滚动条。
-- 模板 Agent 指引：https://github.com/StageDog/tavern_helper_template/blob/main/.agents/skills/tavern-helper-frontend/SKILL.md
+**Round 1 findings**: both versions derived similar concepts ("noodle-shop menu as medical record"); concept-level guidance added little for this model. An AI reviewer scoring "identity, narrative integration" preferred the metaphor-richer version; human review saw no real difference and flagged obvious "hand-made AVG" crudeness — reviewer criteria parroting the skill's own emphasis is circular. Crudeness sources: CSS/SVG block scenes & figures; per-module simulated props; the habitual game-UI kit (crooked red stamps, tag strings, step nodes, radar charts); many ideas at low precision each. **Conclusion**: polish depends on illustration assets and per-element precision; code-drawn art is concept-validation placeholder only; review must ask "does this look like a production with dedicated art polish", not count metaphors.
 
-**逐楼层渲染与性能**：
+**Round 2** (illustration-first, web-collected, still no AI image tool): cultivation card used Song paintings, Tiangong Kaiwu woodcuts, Eighty-Seven Immortals scroll, museum object photos; cyberpunk card used HK night/back-alley photos, prosthetic-hand photo, tile texture — all PD/CC0/CC BY. Human review: direction correct, hand-made feel largely gone. **New issues**: over-restraint (illustration only a banner, rest dark panels + text); registration-form-like creation page; two boxed photos side by side (collage); generic game icons vs documentary photos; no bespoke character art obtainable online. Actual build time ~50–75 min (excluding ~6h external sync stalls).
 
-- 渲染深度设置会让旧楼层不再显示界面。
-- 其他 HTML 注入插件可能导致同一界面重复出现。
-- 代码越多越卡，作者建议楼层中只放加载链接。
-- 出处：https://stagedog.github.io/青空莉/工具经验/实时编写前端界面或脚本/进阶技巧/
+## 9. Unverified
 
-**流式输出**：界面要等文本输出完成才渲染。
-
-**素材与字体**：
-
-- 常见做法是通过 jsDelivr 镜像托管素材，缓存刷新可能有延迟。
-- 字体通过在线字体服务嵌入。
-
-**社区模板自带的前端 Skill**：
-
-- 内容只覆盖工程与适配规则，设计层面几乎没有指导。
-- 示例样式容易被照抄，导致界面趋同（推断）。
-
-## 8. 实际生成测试
-
-**测试方式**：
-
-- 2026 年 10 月，用同一模型，分别按两个题材生成前端卡：赛博朋克地下诊所、修仙宗门外门弟子。
-- 两题材各用两种 Skill 版本生成一次。
-- 测试环境没有生图工具，并禁止使用外部图片，所有美术都由 CSS/SVG 实现。
-
-**观察**：
-
-- 两种版本都从需求中的具体设定推导出了相近的概念，例如"面馆点菜单即病历"。概念层面的指导对这一模型增益有限。
-- AI 评审按"辨识度、叙事融合"等标准打分时，偏好隐喻和道具更多的版本。人工审阅却认为两者看不出区别，都有明显的"AI 手搓 AVG"粗糙感。这说明评审标准如果复述 Skill 自身的重点，会形成循环论证。
-- 人工审阅指出的粗糙感，主要来源有四个：
-  - CSS/SVG 几何块拼出的场景与人物。
-  - 每个模块一个仿制道具。
-  - 模型惯用的游戏化套件，例如红框歪章、小标签串、步骤节点、雷达图。
-  - 想法多、单个元素精度低。
-
-**结论**：精品观感依赖插画素材和单个元素的精度。代码手绘的具象美术只能作为概念验证占位。评审应判断"是否像经过专门美术打磨的成品"，而不是数隐喻。
-
-**第二轮**（插画优先，网络收集素材，仍无生图工具）：
-
-- **素材**：修仙卡用了宋画、《天工开物》版画、《八十七神仙卷》和博物馆器物照片；赛博朋克卡用了香港夜景与后巷照片、义体手照片和瓷砖纹理。均为公有领域、CC0 或 CC BY。
-- **人工审阅结论**：方向正确，手搓感基本消失。
-- **新出现的问题**：
-  - 过度克制。修仙卡的插画只占顶栏，其余是深色面板和文字，显得素。
-  - 建档页像登记表。
-  - 两张来源不同的照片装在方框里并排，有拼贴感。
-  - 通用游戏图标与纪实照片风格冲突。
-  - 网络收集无法提供与角色设定相符的专属人物立绘。
-- **实际工作时长**：约 50～75 分钟。两个代理在同一时段出现过约 6 小时的同步停顿，属于外部原因，不计入。
-
-## 9. 未能验证
-
-- **精品案例**：类脑、旅程等 Discord 社区中的精品卡及其评价，无法访问。
-- **被拦截的站点**：Reddit、Game UI Database、贴吧、知乎、小红书、linux.do 被拦截或要求登录。
-- **B 站数据**：只取到少量评论；字幕需要登录。
-- **开源样本的画面**：多在模拟环境中渲染，未见真实游玩画面。万界商店、SSR 召唤物、心愿社、Astraea 等样本渲染失败或未查看画面，不下结论。
-- **游戏资料**：
-  - Hades、视觉小说文本框惯例、Dead Space 等资料没有找到可靠的一手来源，未采用。
-  - "target render / key art / style frame"等术语没有找到可靠的一手定义，Skill 中以"核心样板"和"设计记录"代替。
-- **统计数据**：同类 Skill 的统计数据和星标数为项目自述或二手资料，未独立核对。
+- Polished cards and their reception in closed Discord communities.
+- Blocked: Reddit, Game UI Database, Tieba, Zhihu, Xiaohongshu, linux.do.
+- Bilibili: few comments; subtitles need login.
+- Open-source samples rendered in simulated environments; real-play screenshots unavailable (Wanjie Shop, SSR summons, Xinyuan Society, Astraea render failures — no conclusions).
+- Game sources not adopted for lack of reliable primary material: Hades, visual-novel textbox conventions, Dead Space; "target render / key art / style frame" definitions (skill uses "core sample" and "design record" instead).
+- Peer-skill stats/stars are self-reported or secondhand, not independently verified.

@@ -1,671 +1,366 @@
-# 设计知识库
+# Design knowledge base
 
-按需查阅，不必通读：
+Consult the section matching the current decision; never read end-to-end.
 
-- **定调时**：读第 1 节和第 7 节。
-- **构图时**：读第 3、4 节。
-- **做样板和扩展时**：按当前问题查对应维度。
-- **复查时**：对照第 8 节。
+- **Setting direction**: §1, §7.
+- **Composition**: §3.
+- **Building sample / extending**: the dimension you're working on.
+- **Review**: §8 failure-mode tables.
 
-维度用于分析、指导和检查，不是施工顺序。相关维度应在同一时刻协同决定。
+Dimensions are lenses for analysis, not build order. Related dimensions are decided together. Examples illustrate reasoning only — never copy their palettes, fonts, props, or numbers as defaults.
 
-本文的示例只演示推导方法。不要把示例中的配色、字体、物件或数值当作默认方案。
+## Contents
 
-## 目录
-
-1. 叙事融合与视觉身份
-   - 1.1 从作品推导视觉身份
-   - 1.2 界面身份与世界逻辑
-   - 1.3 叙事化信息与揭示节奏
-   - 1.4 界面文案与世界语汇
-   - 1.5 情绪与状态表达
-2. 视觉语言
-   - 2.1 色彩
-   - 2.2 字体与排版
-   - 2.3 形状、线条与装饰
-   - 2.4 光影、材质与层次
-   - 2.5 图像与图标
-3. 空间系统
-   - 3.1 构图与布局
-   - 3.2 尺度与间距
-   - 3.3 信息密度
-4. 信息与组件
-   - 4.1 视觉层级
-   - 4.2 题材化组件
-5. 交互与动态
-   - 5.1 交互反馈与世界动作
-   - 5.2 动效
-6. 适配、宿主环境与可用性
-7. 跨维度协调与取舍
-8. 失败模式速查
-
-相对常见的网页设计框架，本文做了三处调整：
-
-- 增加"叙事融合"一类，因为沉浸式界面的大多数视觉决定都由它推出。
-- 合并"光影层次"与"背景材质"。沉浸界面的层次通过材质之间的物理关系表达，分开设计容易出现光向和材质冲突。
-- 合并"间距"与"尺寸"。二者共同决定比例，分开调整容易各自合理而整体失衡。
+1. Narrative identity & integration (identity, formats, copy, mood)
+2. Visual language (color, type, shape, light/material, image & icons)
+3. Space (composition, scale/spacing, density)
+4. Information & components (hierarchy, themed components)
+5. Interaction & motion
+6. Adaptation, host environment, accessibility
+7. Cross-dimension coordination & tradeoffs
+8. Failure-mode quick reference
 
 ---
 
-## 1. 叙事融合与视觉身份
+## 1. Narrative identity & integration
 
-精品叙事界面和"换了题材配色的网页"的根本区别在于：前者先回答"这个界面在故事里是什么"，再让颜色、字体、版式、组件和交互都从这个答案推出。后者先有通用布局和组件，再加题材装饰。
+The difference between a polished narrative UI and "a webpage with a genre reskin": the former first answers "what is this UI inside the story" and derives color, type, layout, components, interaction from that answer; the latter starts from a generic layout and adds genre decoration.
 
-### 1.1 从作品推导视觉身份
+### 1.1 Deriving visual identity from the work
 
-模型自行选择方向时，容易落到题材的平均值，例如末日用黑黄警示条，修仙用墨绿描金，赛博用霓虹青紫。避开默认值的办法是从具体作品出发，而不是换成另一套固定风格。
+Model-chosen directions default to genre averages (post-apoc = black/yellow warning tape; cultivation = ink-green + gold trim; cyberpunk = neon cyan/purple). Escaping defaults means starting from the specific work, not swapping to another fixed style.
 
-1. **列出作品的具体要素**：主要人物的身份、职业、习惯与审美；故事发生的地点与年代；技术水平；势力与制度；关键道具；核心冲突；玩家扮演的身份。
-2. **寻找界面载体**：在这个世界里，这些信息会由谁记录、用什么材料和格式保存、在什么场合被查看。
-3. **写下题材的第一反应**，然后找一个更具体的版本。不要直接取它的反面，反面往往也是另一个默认值。
-4. **选一个记忆点**：一个属于这部作品的具体画面或手感。例如档案封面上的密级印章，随回合燃尽的香，角色写在页边的批注，或只有在夜里才显影的星图。
-5. **从记忆点推导设计语言**：
-   - 颜色来自材料和光源。
-   - 字体来自书写或印刷方式。
-   - 形状来自工艺。
-   - 纹理来自磨损和年代。
-   - 动效来自物件的物理动作。
-6. **做相似提示测试**：把同题材的另一个普通需求交给 Agent，会不会得到几乎一样的界面？会的话，回到第 1 步继续找差异。
+1. **List concrete elements**: protagonists' identity, occupation, habits, taste; place and era; tech level; factions and institutions; key props; core conflict; the role the user plays.
+2. **Find the in-world carrier**: who records this info, in what material and format, viewed on what occasion.
+3. **Write the genre's first reflex, then find a more specific version.** Don't take its opposite — the opposite is usually another default.
+4. **Pick one memory point**: a concrete image or feel belonging to this work — the secrecy stamp on a dossier cover, incense burning down each turn, a character's margin notes, a star chart visible only at night.
+5. **Derive the language from the memory point**: color from materials & light; type from writing/printing; shape from craft; texture from wear and age; motion from the object's physical action.
+6. **Run the similar-prompt test** (§Direction in SKILL.md).
 
-**推导示例**（不可直接复用）：
+Worked derivations (do not reuse):
+- Post-apoc default: black/yellow + radar. If the protagonist maintains an old radio station alone in ruins: a duty log written on the back of equipment manuals — sections switch via frequency dials, signal strength shows outside contact, handwriting degrades with fatigue.
+- Court-intrigue default: red + gold border. If the user plays the historian keeping the emperor's daily record: a bound journal — each interaction an entry timestamped by the hour, sensitive entries inked over, the emperor's vermilion annotations as the only accent.
 
-- **末日题材**：默认是黑黄警示条和雷达扫描。如果主角是在废墟里独自维护旧广播站的技师，界面可以是写在设备说明书背面的值班日志：章节用频率刻度切换，信号强弱表示与外界的联系，手写字迹随体力下降而潦草。
-- **宫廷题材**：默认是红底描金边框。如果玩家扮演负责起居注的女史，界面可以是一册起居注：每次互动是一条按时辰记录的条目，敏感内容可以"涂墨"隐去，帝王朱批作为唯一的强调色。
+### 1.2 Interface identity & world logic
 
-### 1.2 界面身份与世界逻辑
+**Three positionings**:
+- **In-world object**: dossier, ledger, letter, phone, terminal, artifact, map, newspaper, medical record, roster. Strongest immersion; the object's form, material, wear, and text format drive everything.
+- **System UI**: fate panel, cultivation system, game menu. No physical form, so give it a style source (a faction's taste, a system persona) or it degrades into generic HUD.
+- **Hybrid**: system shell + in-world inner pages. Shell handles navigation & consistency; inner pages handle narrative voice.
 
-**目标**：让界面有明确身份，为后续所有视觉选择提供依据。
+**Three questions**: who made it, for whom, viewed at what moment. The answers drive visuals: classified government archive → case numbers, clearance levels, official layout, seals; a girl's journal → handwriting, stickers, correction tape; a sect's jade slip → incised characters, warm jade material, glowing wards.
 
-**界面定位**有三种：
+**World-logic consistency**: objects in one UI come from one world/era/tech level. Realistic settings demand stricter logic (a medieval setting with GPS breaks credibility). Allow at most one deliberate anachronism for usability, and make it explicit.
 
-- **世界内物件**：档案册、账本、信件、手机、终端、法器、地图、报纸、病历、名册。界面的形制、材质、磨损、文字格式都由这个物件决定，沉浸感最强。
-- **系统界面**：命运面板、修炼系统、游戏菜单。它没有物理形态，但仍要有风格来源，例如某个势力的审美、某个系统意识的性格，否则容易退化成通用游戏 HUD。
-- **混合**：系统外壳加世界内内页。外壳负责导航与一致性，内页负责叙事与作者风格。
+**Depth of fusion varies by task**: narrative reading, character display, low-frequency browsing → deep fusion. High-frequency operation, number comparison, fast decisions → clear structure with light genre grammar. Both depths may coexist in one work.
 
-**三个问题**：谁制作这个界面，为谁制作，在什么时刻被看到？答案直接决定视觉。例如政府机密档案对应编号、密级、公文版式、印章；少女的手账对应手写、贴纸、涂改；宗门玉简对应刻字、温润材质和发光的禁制。
+**Tradeoffs**: in-world objects immerse but constrain layout/interaction; system UIs are free but templated; high-volume/high-frequency info leans system or hybrid; character/world showcase leans in-world.
 
-**世界逻辑一致**：
+**Failure signs → fixes**:
+- Genre shell around a generic dashboard (terminal skin over card grid) → make inner info use the object's native formats.
+- Mixed-world props (parchment panel + neon progress bar) → unify sources, or make the shell/inner relationship explicit.
+- Genre feel but no work feel (any same-genre work could reuse it) → redo §1.1.
 
-- 同一界面中的物件来自同一个世界、年代和技术水平。写实设定对界面逻辑要求更高，例如中世纪设定里出现现代定位系统，会打破可信度。
-- 允许一处有意的不真实来换取可用性，但要少，而且明确。
+### 1.3 Information in native formats & reveal pacing
 
-**融合深度随任务而变**：
+Ask: "in this world, how is this piece of info normally recorded?"
 
-- 叙事阅读、角色展示、低频浏览的区域可以深度融入世界。
-- 高频操作、数值比较、需要快速决策的区域保持清晰结构，只保留轻量的题材语法。
-- 同一作品里两种深度可以并存。
+- Finance → ledger columns and totals. Relationships → roster order, forms of address, genealogy. Tasks → commission letter or notice phrasing. Stats → medical form, rating report, fate-chart entries. Location → map, signpost. Time → solar terms, hours, log timestamps.
 
-**取舍**：
+Native formats come from layout, typography, wording, and illustration assets — not from CSS-simulating physical props one by one.
 
-- 世界内物件沉浸强，但会限制布局和交互方式。
-- 系统界面自由，但容易流于模板。
-- 信息量大、操作频繁时偏向系统界面或混合；展示人物与世界时偏向世界内物件。
+**Carrier restraint**: one primary carrier for the whole UI; modules differentiate via layout within it. Sequential props (tape notes, tags, abacus beads, stove fire, stamps) read as a theme park and amplify each other's crudeness. Props needing real object-ness use illustration assets; anything below asset precision uses typography instead.
 
-**低质量表现与修正**：
+**Narrativized numbers**: pair values with in-world descriptions ("breath unstable" + number). Keep exact digits where decisions depend on them.
 
-- 题材外框里装着通用 Dashboard，例如终端外壳内是普通卡片网格。修正：让内部信息也采用该物件的原生格式。
-- 多个世界的物件混在一起，例如羊皮纸面板配霓虹进度条。修正：统一来源，或明确外壳与内页的关系。
-- 只有题材感，没有作品感，任何同题材作品都能直接套用。修正：回到 1.1。
+**Reveal pacing**: locked/unknown/sealed/archived/burned states are themselves narrative. Use face-down cards, seals, redaction, blur, torn pages for suspense; make reveals ceremonial.
 
-### 1.3 叙事化信息与揭示节奏
+**Legends**: symbolic systems need legends; legends can themselves be in-world documents (manual, index, rulebook).
 
-**目标**：信息以它在世界中原本的形态出现，并按叙事节奏逐步揭示。
+**Change presentation**: per-turn updates should highlight what changed (delta marks, new entries, struck-through old info); don't re-dump all data every time.
 
-**原生形态**：先问"在这个世界里，这条信息平时用什么格式记录"。
+**Failure signs → fixes**: everything is label:value or progress bars → native formats; one prop per module → one carrier, layout differentiation; uniform full data dump → three layers (always-visible / expandable / query); symbols without legend → add legend.
 
-- 财政：账目的分栏与合计。
-- 人际：名册的编排、称谓、族谱关系。
-- 任务：委托书或告示的行文。
-- 属性：体检表、评级报告、命盘的条目方式。
-- 位置：地图、路标。
-- 时间：节气、时辰、日志时间戳。
+### 1.4 Copy & world vocabulary
 
-原生形态主要通过版式、排版、措辞和插画素材体现，而不是用 CSS 仿制一个个实物道具。
+- Actions use in-world verbs: open the dossier, sign, archive, burn, cast, place a stone, depart. Meaning must be clear; pair with icon or short note when not.
+- Labels use in-world nouns: institution names, ID formats, units, calendars, forms of address.
+- Decorative foreign text, numbers, clearance marks must be plausible in-world or encode real info. Meaningless English subtitles, "01/02/03" numbering, all-caps micro-labels, middle-dot strings are template tells.
+- Voice matches identity: official documents cold and restrained, diary intimate, system terse, jianghu documents use their argot.
 
-**载体克制**：
+**Failure signs**: generic product copy (OK / Submit / Data Panel); English decoration as premium feel; conflicting voices across modules.
 
-- 一个主载体贯穿全局，例如整套界面是一册档案，或一台终端。
-- 各模块在主载体内用不同的版式区分，不要每个模块换一种道具。胶带便签、挂签、算盘珠、灶火、印章一个接一个出现时，界面会像主题乐园，每个道具的粗糙也会互相放大。
-- 真正需要实物感的道具，用插画素材表现；做不到素材精度的，改用排版。
+### 1.5 Mood & state expression
 
-**数值的叙事化**：
+- **Two channels**: mood rides color temperature, background light, vignette, material state (clean/dusty/damp/damaged), texture strength, motion speed. Text and numbers stay stable and legible.
+- **State-driven variants**: time, weather, location, relationship stage, crisis level can shift palette/background/material — within the same language (same components in a new state, not a new skin).
+- **Key moments** earn stronger layout/motion; everyday states stay restrained so emphasis works.
 
-- 用世界内的描述配合数值，例如"气息紊乱"配合具体数值。
-- 需要决策的关键数值保留精确数字。
-
-**揭示节奏**：
-
-- 未解锁、未知、待解密、已归档、已焚毁这些状态本身就是叙事。
-- 可用背面朝上、封印、涂黑、模糊、残页表现悬念，揭示时给予仪式感。
-
-**图例与帮助**：
-
-- 用符号表达规则时，提供图例。
-- 图例和帮助本身可以写成世界内文献，例如手册、索引、规则书。
-
-**变化的呈现**：
-
-- 每回合更新时，突出"发生了什么"，例如增减标记、新条目、被划掉的旧信息。
-- 不必每次平铺全部数据。
-
-**低质量表现与修正**：
-
-- 所有信息都是"标签：数值"或进度条。修正：换成原生形态。
-- 每个模块一个 CSS 仿制道具。修正：收回到一个主载体，用版式区分模块。
-- 所有数据一次性平铺、密度均匀。修正：分为常显、展开、查询三层。
-- 符号没有图例。修正：补上图例。
-
-### 1.4 界面文案与世界语汇
-
-**目标**：文字像这个世界里的人写的，界面有作者的声音。
-
-**手法**：
-
-- 动作使用世界动词：翻开档案、签署、归档、焚毁、起卦、落子、启程。动词含义必须清楚，不清楚时配合图标或简短说明。
-- 标签使用世界名词：机构名称、编号格式、计量单位、纪年方式、称谓。
-- 外文、编号、密级、页码等装饰性文字，必须在世界中合理，或编码真实信息。无意义的英文副标题、"01 / 02 / 03"式编号、全大写小标签、中点分隔串，都是模板痕迹。
-- 语气与界面身份一致：公文冷静克制，日记亲密随意，系统机械简短，江湖文书有其行话。
-
-**低质量表现**：
-
-- 通用产品文案，如"确定""提交""数据面板"。
-- 用英文装饰营造高级感。
-- 不同模块的语气彼此冲突。
-
-### 1.5 情绪与状态表达
-
-**目标**：界面随剧情、时间和角色状态变化，让情绪可以被感知。
-
-**手法**：
-
-- **情绪与信息走两条通道**：
-  - 情绪由色温、背景光、边缘暗角、材质状态、纹理强度、动效速度承担。材质状态如干净、沾灰、受潮、破损。
-  - 文字与数字保持稳定可读，不让情绪效果干扰信息。
-- **状态驱动的变体**：时间、天气、地点、关系阶段、危机等级可以改变配色、背景或材质。变化发生在同一设计语言之内：同一组件换状态，而不是换一套皮肤。
-- **关键时刻的特殊处理**：剧情转折、角色登场、结局可以用更强的版式或动效。日常状态保持克制，强调才有效。
-
-**低质量表现**：
-
-- 情绪只靠文字描述。
-- 危机时整屏闪烁或大面积红色遮盖内容。
-- 状态变体变成完全不同的风格。
+**Failure signs**: mood only via text; crisis = full-screen flashing or red overlays; state variants become entirely different styles.
 
 ---
 
-## 2. 视觉语言
+## 2. Visual language
 
-### 2.1 色彩
+### 2.1 Color
 
-**目标**：用有限的、各有分工的颜色建立辨识度和层级。
+Decide value structure first, hue second: overall light/dark/mid; maximum contrast at the focal point; thumbnail value masses should read the layout.
 
-**设计变量**：明度结构、色相家族、饱和度、色温、强调色面积与用途、状态色。
+Decision order: primary color → marks & key type → secondary colors (few, functional only: numbers, states).
 
-**手法**：
+- Color originates in the world: the material's own colors (paper, ink, bronze, lacquer, jade, tube light), scene light, faction emblems. Describe colors by concrete material ("damp rice paper", "oxidized copper", "faded cinnabar") — this steers consistency far better than "dark blue" / "gold".
+- Accent only for key info and operable elements; smaller area = more effective.
+- State colors are variants within the palette, not default red/green/yellow; also differentiate by shape/icon/text.
+- Gradients simulate light, material, atmosphere transitions — never "add some effect" to buttons/titles.
 
-- **先定明度结构，再定色相**：
-  - 页面整体是亮、暗还是中间调。
-  - 焦点处给予最大对比。
-  - 缩略图里明暗分区应能读出版面结构。
-- **决策顺序**：先定主色，再定标志与关键字体，最后定副色。副色保持很少，只用于数值和状态等功能信息。
-- **颜色来源于世界**：材料的固有色（纸、墨、铜、漆、玉、灯管）、场景光、势力纹章。用具体材料描述颜色，例如"受潮宣纸""氧化铜""褪色朱砂"，比"深蓝""金色"更能引导一致的选择。
-- **强调色只给关键信息和可操作元素**，面积越小，越有效。
-- **状态色融入色系**：危险、成功、警告使用色系内的变体，而不是默认的红绿黄。同时用形状、图标或文字区分，不只依赖颜色。
-- **渐变用于模拟光照、材质和氛围过渡**，不用于给按钮和标题"加点效果"。
+**Tradeoff**: fewer colors = more focused identity; state-heavy systems need more differentiation — offload to value, shape, position.
 
-**取舍**：颜色越少，辨识度越集中；但状态多的系统需要足够区分度，这时用明度、形状和位置分担。
+**Failure signs → fixes**: purple-blue gradients + neon glow + translucent dark panels everywhere → return to concrete materials & light sources; gold on every border → gold only at top hierarchy; many colors with no roles → assign each a role, delete the rest; low contrast (dark bg gray text, beige bg pale gold) → body text ≥4.5:1 (WCAG AA).
 
-**低质量表现与修正**：
+### 2.2 Type & typography
 
-- 紫蓝渐变、霓虹描边发光、所有面板都是半透明暗底。修正：回到具体材料和光源。
-- 金色泛滥，每个边框都描金。修正：金色只留给最高层级。
-- 颜色多而没有分工。修正：列出每个颜色的角色，删掉没有角色的颜色。
-- 暗底灰字、米底浅金字之类的对比不足。修正：正文对比度至少达到 4.5:1（WCAG AA）。
+Type is the UI's voice; Chinese long-form reading still has hard floors.
 
-### 2.2 字体与排版
+- **Roles**: display type carries character (titles, nameplates); body type guarantees legibility; data type aligns numerals; in-world type shows the writer (handwriting, typewriter, inscription).
+- **2–3 families max.** More requires justification (several distinct "writers" in-world).
+- Decorative type for short text only; long body uses a legible hei/serif body face — character comes from color, layout, and display type.
+- **Chinese body floors**: ≥14px (15–17px typical); line-height 1.6–1.9; ~20–40 chars per line; no extra body tracking; no synthetic CJK italics (most CJK fonts lack real italics and get mechanically slanted). These are readability floors, not style rules.
+- Hierarchy via combined scale+weight+color+whitespace; adjacent levels must differ clearly (avoid 1–2px steps).
+- CJK webfonts are huge: load display faces only for titles, or subset; set fallback stacks; verify rare/traditional glyph coverage; layout must not collapse on font-load failure.
+- CJK-Latin mixing: coordinate weights and visual sizes; full-width punctuation in Chinese context; `font-variant-numeric: tabular-nums` for number-dense regions.
+- Vertical type: titles, nameplates, side labels (short text). Long vertical text: check reading & scroll direction.
 
-**目标**：字体是界面的"声音"，同时保证中文长文本的阅读质量。
+**Failure signs → fixes**: all system-default fonts, no voice → at least choose identity fonts for titles and in-world text; decorative font / tiny size / low contrast as "premium" → return to body floors; too many close levels → merge to 3–5 and widen gaps; missing fallbacks (tofu, jarring system fonts) → stack + preview missing-glyph cases.
 
-**设计变量**：字族与角色、字重、字号层级、行高、字距、行长、对齐、中英混排、数字字形。
+### 2.3 Shape, line & ornament
 
-**手法**：
+One geometric grammar per work, reused globally: radius scale, line widths, corner ornaments at few levels each. The grammar should explain the craft: riveted metal → cut corners; bound paper → right angles and torn edges; jade → soft curves.
 
-- **字体按角色分工**：
-  - 展示字体承担气质，用于标题和名牌。
-  - 正文字体保证易读。
-  - 数据字体要求数字整齐。
-  - 世界内文字表现书写者，例如手写、打字机、刻印。
-- **控制字族数量**：通常 2～3 个就够。更多字族需要明确理由，例如界面里有几位不同的"书写者"。
-- **装饰字体只用于短文本**。长段正文使用易读的黑体或宋体正文字体，用颜色、版式和标题字体保留气质。
-- **中文正文的起点**：
-  - 字号不低于 14px，常用 15～17px。
-  - 行高 1.6～1.9。
-  - 每行约 20～40 字。
-  - 正文不额外加大字距，也不使用中文斜体，因为多数中文字体没有真斜体，只会被机械倾斜。
+- Ornament motifs come from the world: emblems, regional patterns, institution insignia, object silhouettes, star charts. One motif reused at multiple scales (background watermark → divider → list bullet).
+- Lines carry structure: separate regions, lead the eye, express hierarchy. One directional line can pull the eye to the focal point.
+- Ornament concentrates at boundaries and focal points; reading zones stay clean.
 
-  这些是可读性的起点，不是风格规定。
-- **层级靠组合拉开**：字号比例、字重、颜色和留白共同作用。相邻层级差距要足够明显，避免多级字号只差 1～2px。
-- **中文 Web 字体的处理**：
-  - 中文字体文件很大，只为标题加载特色字体，或做子集化。
-  - 设置后备字体栈，确认生僻字、繁体和符号的字形覆盖。
-  - 字体加载失败时版式不应崩坏。
-- **中英混排**：英文、数字与中文的字重和视觉大小要协调，中文语境使用全角标点。数字多的区域考虑等宽数字（`font-variant-numeric: tabular-nums`）。
-- **竖排**：可用于标题、名牌、侧签等短文本。长文本竖排要检查阅读与滚动方向。
+**Failure signs → fixes**: per-module radii/line-widths → unify grammar; every container = rounded rect + 1px border → differentiate by hierarchy and object nature; corner flowers / lace competing with content → keep only structural or identity-bearing ornament; emoji/Unicode symbols as decoration → SVG motifs or genre symbols.
 
-**低质量表现与修正**：
+### 2.4 Light, material & depth
 
-- 全部使用系统默认字体，界面没有声音。修正：至少为标题和世界内文字选择有身份的字体。
-- 用装饰字体、极小字号或低对比营造"高级感"。修正：回到正文底线。
-- 字号层级过多而差距过小。修正：合并为 3～5 级，并拉开差距。
-- 后备字体缺失，出现方块字或风格突兀的系统字体。修正：设置字体栈，并在缺字情况下预览。
+Establish one credible physical space: where light comes from, what's on top, what each surface is made of. Variables: light direction & temperature; shadow softness/distance/color, highlights; depth of field/blur; materials (paper, leather, wood, metal, glass, cloth, stone, screen, hologram); transparency, texture strength, wear & age.
 
-### 2.3 形状、线条与装饰
+- **One light source**: a single direction and temperature; every shadow, highlight, inset, emboss obeys it.
+- **Material relationships express depth**: paper stacked on a desk, nameplate riveted to wood, hologram hovering in the dark. Don't give every card the same shadow.
+- Shadows carry ambient color: warm light → deep-brown shadows, cold light → deep-blue. Pure black translucency reads dirty.
+- **Material implementation**: realistic main surfaces (paper, leather, wood, metal) prefer texture assets; CSS gradients/noise/SVG filters suit secondary surfaces and abstract materials; CSS-simulated realistic objects (tape, wood grain, tin, rivets) read fake at first glance — never as the primary treatment; reduce texture under text.
+- Glass/blur only with a concrete reason (the world actually has glass/screens, or the key visual must show through).
+- Aging (wear, stains, creases) concentrates at edges/corners; aging level uniform across the UI.
 
-**目标**：用一致的几何语法表达世界的工艺与年代。
+**Tradeoff**: realistic material depends on quality assets. Focal area uses texture assets; outlying areas may approximate the same material in CSS, but the approximation must not read visibly cruder.
 
-**设计变量**：轮廓、线宽与线型、边框结构、分隔方式、装饰母题。
+**Failure signs → fixes**: every panel = translucent black + blur + glow stroke → pick real materials; contradictory light directions → unify; noise/scanlines/paper grain on text → reduce/remove under text; inconsistent texture resolution/stretch → normalize.
 
-- 轮廓：直角、圆角、切角、不规则、撕边。
-- 边框结构：单线、双线、内外框、角饰。
+### 2.5 Image & icons
 
-**手法**：
+Illustration assets carry the key visual and all concrete art, integrated with the UI; icons share the UI's grammar.
 
-- **选择一套形状语法，全局复用**：圆角半径、线宽、角饰各定少量级别，所有组件共享。语法本身应能说明工艺，例如铆接金属的切角、装订纸张的直角与撕边、玉器的柔和弧度。
-- **装饰母题来自世界**：纹章、地方纹样、机构徽记、器物轮廓、星图。同一母题可以在多个尺度复用，例如大尺度作为背景水印，小尺度作为分隔符或列表符号。
-- **线条承担结构**：分隔区域、引导视线、表现层级。一条有方向的线就能把视线引到焦点。
-- **装饰集中在边界与焦点**，阅读区保持干净。
+**Division of labor**:
 
-**低质量表现与修正**：
-
-- 每个模块圆角和线宽各不相同。修正：统一语法。
-- 所有容器都是同样的圆角矩形加 1px 边框。修正：按层级和物件性质区分形态。
-- 角花、花边堆砌，装饰比内容抢眼。修正：只保留有结构作用或身份意义的装饰。
-- 用 emoji 或 Unicode 符号当装饰。修正：改用 SVG 母题或题材符号。
-
-### 2.4 光影、材质与层次
-
-**目标**：建立可信的物理空间：光从哪里来，哪一层在上，表面是什么材料。
-
-**设计变量**：
-
-- 光源方向与色温。
-- 阴影的软硬、距离、颜色；高光。
-- 景深与模糊。
-- 材质：纸、皮革、木、金属、玻璃、布、石、屏幕、全息。
-- 透明度、纹理强度、磨损与老化。
-
-**手法**：
-
-- **统一光源**：确定一个光源方向和色温，所有阴影、高光、内阴影、浮雕都遵守。
-- **用材质关系表达层次**：纸叠在桌面上，铭牌铆在木板上，全息投影悬在暗处。不要给每张卡片套同一种阴影。
-- **阴影带环境色**：暖光下的阴影偏深棕，冷光下偏深蓝。纯黑半透明阴影会让画面发脏。
-- **材质的实现方式**：
-  - 主要表面的写实材质，例如纸、皮革、木、金属，优先使用纹理素材。
-  - CSS 渐变、噪点、SVG 滤镜适合次要表面和抽象材质。
-  - 用 CSS 仿制的写实物件，例如胶带、木纹、铁皮、铆钉，往往一眼假，不要作为主要表现手段。
-  - 文字下方的纹理要减弱。
-- **玻璃与模糊**：只在有具体理由时使用，例如世界中确实是玻璃或屏幕，或需要透出背后的主视觉。
-- **老化细节**：磨损、污渍、折痕集中在边缘和角落，全界面老化程度一致。
-
-**取舍**：材质越写实，越依赖高质量素材。焦点区使用纹理素材，其余区域可以用 CSS 近似同一种材质，但近似的精度不能明显低于焦点区。
-
-**低质量表现与修正**：
-
-- 所有面板都是半透明黑底加模糊加发光描边。修正：确定真实材质。
-- 光向矛盾。修正：统一光源。
-- 噪点、扫描线、纸纹压在文字上。修正：在文字区减弱或移除。
-- 纹理分辨率不一、被拉伸模糊。修正：统一处理。
-
-### 2.5 图像与图标
-
-**目标**：插画素材承担主视觉和具象美术，并与界面融为一体；图标和界面使用同一套语法。
-
-**设计变量**：
-
-- 主视觉主体：人物、场景、器物、地图，或纯排版。
-- 画风、裁切、比例、在构图中的位置。
-- 边缘处理：羽化、遮罩、出框。
-- 调色、图标风格。
-
-**素材与代码的分工**：
-
-| 由插画素材承担 | 由代码实现 |
+| Illustration assets | Code |
 | --- | --- |
-| 人物立绘与头像、场景与背景、关键器物与物品图、写实材质纹理 | 版式与排版、边框与分隔、装饰纹样、图标、抽象图形与数据图形、光影与调色叠层、动效 |
+| Character portraits/figures, scenes & backgrounds, key objects & items, realistic material textures | Layout & typography, borders & dividers, ornamental patterns, icons, abstract & data graphics, light/color grading overlays, motion |
 
-- 精品前端卡的观感很大程度来自真正的插画。具象主体在终版中使用生成或收集的插画素材。
-- 用 CSS/SVG 画的场景、人物、建筑、器物，精度远低于插画，会让整个界面显得像手搓的小游戏。它们只用于构图和概念验证阶段的占位，交付前替换。
-- 拿不到素材时，不要退回代码手绘，而是：
-  - 改用排版与抽象图形构成主视觉。
-  - 或保留明确标注的占位，并列出缺少的素材。
+- The polished-card look comes largely from real illustration. Concrete subjects ship as generated or collected assets.
+- CSS/SVG-drawn scenes, people, architecture, objects are far below illustration precision and read as programmer art. Placeholder only; replace before delivery.
+- When assets can't be obtained, do NOT fall back to code-drawn art: rebuild the key visual around typography & abstract graphics, or keep an explicitly labeled placeholder and list the missing asset.
 
-**素材的一致性**：
+**Asset consistency**:
+- Write the shared style description first (medium: thick-paint/watercolor/ink/cel/photo; brushwork; light direction; palette; clarity). Reuse verbatim in every generation request; use it as the filter for collected assets.
+- Mixed sources: unify via grading, desaturation, shared grain, shared edge treatment; still conflicting → replace.
+- One character across images: same face, clothing, style. Too many characters to keep consistent → reduce the count; use silhouettes, partials, or text dossiers.
+- Item icons and item illustrations: pick one system, not half illustration + half line icons.
 
-- 先写一段全作品共用的画风描述：媒介（厚涂、水彩、水墨、赛璐璐、摄影）、笔触、光源方向、色调、清晰度。所有生成请求复用这段描述。
-- 网络收集的素材，以这段描述为筛选标准。不同来源的素材通过统一调色、颗粒和边缘处理拉齐，仍冲突就换掉。
-- 同一人物在不同图中保持外貌、服装和画风一致。人物数量多、难以保持一致时，减少需要出现的人物图，改用剪影、局部或文字档案。
-- 物品图标与物品插画只选一种体系，不要一部分是插画、一部分是线性图标。
+**Composition patterns** (choose by content, combinable):
+- **Full-bleed base + floating layers**: illustration covers the whole base; panels float above; gradient masks/quiet underlays keep text contrast; the picture shows through gaps and edges.
+- **Hero bleed**: illustration owns most of the first screen; title and key actions sit in its quiet zones.
+- **Character-led**: figure placed to one side, crossing panel boundaries, info arranged around it (visual-novel layout).
+- **Scene switches with state**: time/location/weather changes the graded base image, so functional pages stay pictorial.
+- **Plates in sets**: items/portraits share crop, background, treatment, arranged like a catalog.
 
-**手法**：
+**One hero image per screen.** Secondary images blend into the same picture or form a uniformly treated set. Two differently-sourced images boxed side by side = collage.
 
-- **主视觉参与构图**：它决定版面重心，文字与组件围绕它布置，而不是被装进卡片，也不只是一条顶栏。
-- **画面主导的构图方式**（按内容选择，可以组合）：
-  - **全幅底图加浮层**：插画铺满整个界面的底层，面板浮在其上；用渐变遮罩或半透明底面保证文字对比，让画面从面板之间和边缘透出来。
-  - **主图出血**：插画占据首屏的大部分，标题和关键操作压在画面的安静区。
-  - **人物主导**：人物立绘侧置，并越过面板边界，信息围绕人物排布，类似视觉小说的布局。
-  - **场景随状态切换**：时间、地点、天气变化时更换或调色底图，功能页因此始终有画面，而不是只有数据。
-  - **图版成组**：物品、人物头像使用同一套裁切、底色与处理方式，成组排列，像一册图录。
-- **一屏一个主图**：
-  - 每屏只有一个主导图像。
-  - 次要图像通过遮罩、羽化、调色融入主图所在的画面，或成为风格统一的成组图版。
-  - 两张来源、光线、色调不同的图片装在方框里并排摆放，会产生拼贴感。
-- **主视觉延续到功能页**：功能页保留画面的方式包括：插画作为面板下降低对比的底层、人物局部裁切、器物作为分区标志、随状态切换的场景。进入功能页后只剩深色面板和文字，是常见的完成度落差。
-- **克制不等于去掉画面**：去掉道具和装饰后，空出的面积交给插画和排版。整页以深色平面、细线和文字为主时，即使每个细节都干净，也会显得素和空。
-- **素材统一**：
-  - 画风、清晰度、光源、色调保持一致。
-  - 统一手段包括调色叠层、降低饱和、统一颗粒感、统一边缘处理。用这些手段把不同来源的素材融入同一画面。
-- **文字与图像**：
-  - 为文字预留安静区域。必要时用渐变遮罩保证对比度。
-  - 不让文字遮住关键人物的面部。
-- **图标**：
-  - 统一线宽、端点、圆角和视觉重量。
-  - 优先使用题材符号，例如印章、卦象、星座、徽记，或使用同一套图标。
-  - 通用图标库的风格往往与作品不符，例如在纪实照片旁边放卡通化的游戏图标。只改颜色通常不够。与照片或古画并置时，优先改用物品图版、照片局部或文字；确实需要图标时，按作品的线宽和填充方式重新整理，并降低它的视觉权重。
-  - 不使用 emoji。
-- **人像**：档案中的人像使用统一的裁切比例和处理方式，例如证件照、旧照片、素描，与界面身份匹配。
+**Art continues into functional pages**: illustration as a lowered-contrast layer under panels, cropped character partials, objects as section markers, state-switching scenes. Entering functional pages and losing all art is the classic quality collapse.
 
-**低质量表现与修正**：
+**Restraint ≠ removing pictures**: space freed from props goes to illustration and typography. A page of dark planes + hairlines + text reads plain no matter how clean.
 
-- 用 CSS/SVG 几何块拼出的场景、建筑、人物剪影作为终版主视觉。修正：替换为插画素材；拿不到时改为排版主导。
-- 素材直接铺进矩形框。修正：裁切、遮罩、调色、边缘融合。
-- 写实照片配扁平图标，生成图与界面画风冲突。修正：统一画风，或统一后期处理。
-- 同一作品的几张生成图画风、光源各不相同。修正：复用同一段画风描述重新生成。
-- 占位头像、空白格子。修正：设计空状态，或补充素材。
-- 用图片承载文字和按钮。修正：文字与交互用代码实现。
+**Text & image**: reserve quiet zones for text; gradient masks when needed; never cover key faces.
+
+**Icons**: unified stroke width, terminals, corners, weight. Prefer genre symbols (seals, trigrams, constellations, insignia). Generic icon libraries clash with photographic/classical assets — recoloring is usually not enough; beside photos or old paintings prefer item plates, photo crops, or text. No emoji.
+
+**Portraits in archives**: unified crop ratio and treatment (ID photo, old photograph, sketch) matching interface identity.
+
+**Failure signs → fixes**: CSS/SVG block-built scene/figure as final key visual → replace with illustration, or typography-led rebuild; raw asset dropped into a rectangle → crop/mask/grade/blend; flat icons beside realism → unify style or downgrade icon weight; generated images with mismatched styles/lights → regenerate with the shared style description; placeholder avatars/blank cells → designed empty states or more assets; text/buttons baked into images → code-rendered text and controls.
 
 ---
 
-## 3. 空间系统
+## 3. Space
 
-### 3.1 构图与布局
+### 3.1 Composition & layout
 
-**目标**：版面有焦点、有方向、有轻重，而不是均匀的格子。
+Start from composition: focal point, major regions, reading path — then place components. Borrow the structure of the carrier object: dossiers have spines and tabs, newspapers have columns and a front page, phones have status bars and apps, maps have legends and scale bars. Object structure naturally produces non-repeating layouts.
 
-**设计变量**：视觉重心、分区比例、网格、对称与非对称、层叠、出血、留白、阅读路径。
+- **One primary, several secondary**: one region takes the most area or strongest contrast; avoid equal-sized competitors.
+- **Layering & frame-breaking**: characters, seals, notes may cross region borders to break mechanical rigidity — never covering text or actions.
+- **Adjacent regions vary in composition**; not every section is "heading + card grid."
+- **Functional UIs may be regular**: terminals, tables, consoles — regularity is the language; refinement comes from proportion, type, detail.
+- **Flow pages are not forms**: onboarding, character creation, settings → not "left label / right input" tables. One step per screen, each with its own picture; key options (origin, faction, talent) get illustration plates; result reveals earn a visual climax. "One screen" = one complete picture, not forced 100vh; let content height shrink or let illustration fill the space, no large empty dark areas. Inputs stay clearly usable.
 
-**手法**：
+**Failure signs → fixes**: centered title + three equal card columns → redistribute area by importance; character-creation page reads as a registration form → rebuild as flow; random tilts "to not look templated" → every grid break needs a reason; wide-screen-only design → recompose at narrow widths, don't just scale down.
 
-- **从构图开始**：先确定焦点、主要分区和阅读路径，再填入组件。
-- **借物件结构组织版面**：
-  - 档案册有书脊和页签，报纸有栏位和头版，手机有状态栏和应用页，地图有图例与比例尺。
-  - 物件结构会自然带来彼此不雷同的布局。
-- **一主多次**：一个主区域占据最大面积或最强对比，几个次级区域围绕它。避免多个同等大小的区域竞争注意力。
-- **层叠与出框**：人物、印章、便签可以跨越区域边界，打破机械感，但不能遮挡文字和操作。
-- **相邻区域的构图应有变化**，不要每一节都是"标题加卡片网格"。
-- **功能型界面可以规整**：终端、表格、控制台的规整本身就是设计语言，这时靠比例、字体和细节体现精致。
-- **流程页不做成表单**：
-  - 建档、选择出身、设置这类流程，不要排成"左侧标签、右侧输入框"的表单。
-  - 可以一步一屏，每步有自己的画面；关键选项（出身、阵营、天赋）做成带插画或图版的选项；结果揭晓时给予画面上的高潮。
-  - "一屏"指一个完整的画面，不是把每步固定撑满视口高度。内容少时让高度随内容收短，或让插画承担多出的空间，不留大片空白。
-  - 输入框等控件仍保持清楚可用。
+### 3.2 Scale & spacing
 
-**低质量表现与修正**：
+- Scale contrast must be obvious: focal elements clearly larger; even sizing makes everything equally important.
+- Spacing on a ratio scale; intra-group distance clearly smaller than inter-group.
+- Body column width follows line length, not screen width.
+- Whitespace allocated unevenly: generous around the focal point, compact in data zones.
+- Design at the actual available width — embedded chat panes are far narrower than the browser window.
 
-- 居中标题加三列等宽卡片。修正：按内容重要性重新分配面积。
-- 建档页像一张登记表。修正：按流程页的方式重做，让选择本身有画面。
-- 为了"不像模板"随意错位倾斜。修正：每一处打破网格都要有理由。
-- 布局只为宽屏设计。修正：窄宽度下重新组织，而不是等比缩小。
+**Failure signs**: all spacing equal; content touching edges; heading closer to the section above than to its own content.
 
-### 3.2 尺度与间距
+### 3.3 Information density
 
-**目标**：用尺度对比制造层级，用间距节奏表达分组。
+- Contrast dense vs sparse: hero/narrative areas airy, data areas compact, clearly separated.
+- Progressive disclosure in three layers: always-visible (every turn), expandable (occasionally), query (archives/history). Per-turn UIs especially need restraint.
+- Density matches the object: ledgers and terminals are dense; invitations and poem cards are sparse.
+- Too much info → cut or fold first; never shrink type to fit.
 
-**设计变量**：尺度对比、容器宽度、间距层级、组内与组间距离、留白分配。
-
-**手法**：
-
-- **尺度对比要明显**。焦点元素明显更大；尺寸平均会让一切显得同等重要。
-- **间距成体系**：使用一组有比例关系的间距值，组内距离明显小于组间距离。
-- **正文宽度由行长决定**，不由屏幕宽度决定。
-- **留白不均匀分配**：焦点周围宽松，数据区可以紧凑。
-- **以实际可用宽度设计**：嵌入聊天流或宿主页面时，按实际可用宽度设计，它通常明显窄于浏览器窗口。
-
-**低质量表现**：
-
-- 所有间距相等。
-- 内容贴边。
-- 标题离自己的内容比离上一节更远。
-
-### 3.3 信息密度
-
-**目标**：在沉浸感与信息效率之间形成有节奏的疏密。
-
-**手法**：
-
-- **疏密对比**：主视觉与叙事区疏朗，数据区可以紧凑，两者明确分开。
-- **渐进披露**：分为常显（每回合必看）、展开（偶尔查看）、查询（档案、历史）三层。每回合重复出现的界面尤其需要克制。
-- **密度与物件匹配**：账本和终端本来就密，请柬和诗笺本来就疏。
-- **信息过多时先删减或折叠**，不要靠缩小字号塞下。
-
-**低质量表现**：
-
-- 状态栏塞满十几项属性和大段心理描写。
-- 全界面同一密度。
-- 为显得丰富而填满空格子。
+**Failure signs**: status bar crammed with a dozen stats plus long psychological prose; uniform density; filling every cell to look rich.
 
 ---
 
-## 4. 信息与组件
+## 4. Information & components
 
-### 4.1 视觉层级
+### 4.1 Hierarchy
 
-**目标**：用户第一眼、第二眼、第三眼看到什么，都经过设计。
+- Assign 1 focal point, 2–3 secondary, the rest background.
+- Emphasize by combining 2–3 of scale/contrast/color/position/whitespace/motion — not everything bold and bright.
+- Emphasis budget: the more emphasized elements, the less any emphasis works.
+- Primary action most prominent; secondary actions lower weight but discoverable.
+- Hierarchy operates at two levels: within modules and between modules.
 
-**手法**：
+**Failure signs**: all headings equally loud; ornament outshines information; key actions buried in decoration.
 
-- **划分主次**：明确 1 个焦点、2～3 个次级，其余为背景信息。
-- **组合强调**：从尺度、对比、颜色、位置、留白、动效中组合 2～3 种来强调，而不是全部加粗加亮。
-- **强调有预算**：被强调的元素越多，强调越无效。
-- **交互元素可发现**：主操作最显著；次要操作权重降低，但仍可发现。
-- **层级在两个层面都成立**：模块内有主次，模块之间也有主次。
+### 4.2 Themed components
 
-**低质量表现**：
+Component family (buttons, tabs, inputs, switches, progress, modals, toasts, list items) shares one grammar of shape, line, material, states.
 
-- 所有标题同样醒目。
-- 装饰比信息更显眼。
-- 关键操作淹没在装饰里。
+- Theming comes from the family grammar + type + wording — not from making every component a physical prop. Hit areas, current state, action meaning must be unambiguous; common controls stay where users expect.
+- **Props: few and precise.** At most one or two key components get physical object form (a signature seal on confirm, spine tabs for main nav) — at asset-level precision (illustration or refined graphic), else make them restrained themed standard components.
+- Full state set: default, hover, focus, active, selected, disabled, loading, empty, error. Themed states as refined as defaults.
+- Native controls (selects, scrollbars, sliders, checkboxes, text selection, focus rings) join the family while keeping accessibility.
 
-### 4.2 题材化组件
-
-**目标**：组件是世界物件的一部分，同时保持熟悉、可预期的操作方式。
-
-**手法**：
-
-- **组件家族**：按钮、页签、输入框、开关、进度、弹窗、提示、列表项共享同一套形状、线条、材质和状态规则。
-- **题材化而不难用**：
-  - 题材感主要来自组件家族的形状、线条、材质、字体和措辞，而不是把每个组件做成一个实物道具。
-  - 点击区域、当前状态和动作含义必须清楚。
-  - 最常用的控件保持可预期的位置和行为。
-- **道具化要少而精**：
-  - 整套界面里，最多一两个关键组件做成实物形态，例如确认时的签押、主导航的书脊页签。
-  - 这样的组件要达到素材级精度，可以用插画素材或精细的图形，否则不如做成克制的题材化普通组件。
-- **完整的状态集**：默认、悬停、焦点、按下、选中、禁用、加载、空、错误。题材化的状态要和默认状态一样精致。
-- **原生控件统一样式**：下拉框、滚动条、滑块、复选框、文本选中色、焦点环都要纳入设计语言，同时保留原生的可访问性。
-
-**低质量表现与修正**：
-
-- 题材外壳里出现浏览器默认按钮或组件库默认样式。修正：统一为组件家族。
-- 过度题材化，看不出哪里可以点。修正：保留悬停变化、光标、凹凸或阴影等可操作线索。
-- 印章、挂签、便签、算盘、灶火等仿制道具一个接一个，每个都只有草稿精度。修正：收回到一个主载体，只保留一两个精做的关键道具。
-- 只做了默认状态。修正：补齐状态集。
+**Failure signs → fixes**: browser-default button inside genre shell → unify to family; over-themed, can't tell what's clickable → keep hover change, cursor, relief/shadow affordances; stamp-after-tag-after-note props all at draft precision → collapse to one carrier + one or two refined props; default state only → complete the state set.
 
 ---
 
-## 5. 交互与动态
+## 5. Interaction & motion
 
-### 5.1 交互反馈与世界动作
+### 5.1 Feedback as world action
 
-**目标**：每次操作都有清楚的反馈，同时像在世界中完成了一个动作。
+- Immediate visual response on click.
+- Waiting states have in-world expression plus clear status text (ink blooming, signal searching, incense burning).
+- World actions: page turns, stamping, drawing lots, dial turning, scroll unfurling — converted into transitions and feedback. Actions stay short; never block repeated operation.
+- State changes visible: selected/done/disabled/new each have a clear, consistent look.
+- Errors & empty states phrased in-world, with an actionable next step.
+- Keyboard & touch: everything keyboard-operable with visible focus; touch targets large enough.
 
-**手法**：
+**Failure signs**: no hover/active feedback; static waiting with no indication; themed actions so long they annoy on repetition.
 
-- **反馈即时**：点击后立即有视觉回应。
-- **等待有表现**：耗时操作，例如等待生成内容，要有世界内的等待表现和明确的状态文字，例如墨迹晕开、信号搜索、香火燃烧。
-- **世界动作**：翻页、盖章、抽签、拨盘、展开卷轴。把动作的物理感转化为过渡与反馈。动作要短，不阻碍连续操作。
-- **状态变化可见**：选中、完成、不可用、新增，各有明确且一致的表现。
-- **错误与空状态**：用世界内的说法表达，同时给出可执行的下一步。
-- **键盘与触控**：所有交互可用键盘完成，焦点清晰可见；触控目标足够大。
+### 5.2 Motion
 
-**低质量表现**：
+Character from the world: mechanical → hard cuts/stepped; paper → fold/light drop; ink → bloom/fade; sci-fi → scan/unfold; uncanny → flicker/lag. One duration/easing family per work. Entrance choreography staggers in reading order toward the focal point. Looping animation (blink, particles, scanlines) fatigues and distracts — push to edges/low contrast, reduce amplitude, respect `prefers-reduced-motion`. Performance: prefer transform/opacity; large blurs/filter animation/particles stutter on mobile or multiple simultaneous renders.
 
-- 没有悬停和按下反馈。
-- 等待时界面静止，没有任何提示。
-- 题材化动作太长，反复操作时拖沓。
-
-### 5.2 动效
-
-**目标**：动效有性格，服务于层级、因果与氛围。
-
-**设计变量**：时长、缓动、方向、编排、触发方式、是否循环。
-
-**手法**：
-
-- **性格来自世界**：
-  - 机械：硬切、步进。
-  - 纸张：翻折、轻落。
-  - 水墨：晕开、淡入。
-  - 科幻：扫描、展开。
-  - 灵异：闪烁、迟滞。
-- **全局统一**：同一作品使用同一组时长与缓动。
-- **编排**：入场时按阅读顺序错开，把视线引向焦点。
-- **克制循环动画**：持续的闪烁、粒子、扫描线会造成疲劳、分散阅读。放在边缘或低对比处，并减小幅度。
-- **尊重系统设置**：遵循"减少动态效果"的系统偏好（`prefers-reduced-motion`）。
-- **性能**：优先使用 `transform` 和 `opacity`。大面积模糊、滤镜动画和大量粒子在手机或多处同时渲染时容易卡顿。
-
-**低质量表现**：
-
-- 所有元素都是同一个淡入。
-- 到处是悬浮发光脉冲。
-- 时长各不相同。
-- 动画阻塞交互。
+**Failure signs**: everything fades in identically; floating glow pulses everywhere; inconsistent durations; animation blocks interaction.
 
 ---
 
-## 6. 适配、宿主环境与可用性
+## 6. Adaptation, host & accessibility
 
-**目标**：在目标设备和宿主环境中，设计意图和可用性都成立。
+- **Narrow-width first**: narrative UIs often live in chat panes or phones (~360px). Recompose (stack, tabs, fold) at narrow widths — keep focal point and key visual; don't scale down proportionally.
+- **Embedded host**: viewport units may measure the iframe, not the window; let height follow content, avoid `vh`/parent-height dependencies; verify fullscreen/height-coupled layouts in place. The same UI may render in many messages: control image weight, animation, script count; consider read-only snapshots for old messages. UI renders after text finishes streaming — design a load transition consistent with the work, no blank/flash. Scope styles; don't rely on globals. The UI persists across the whole conversation, not just the opening. Model-generated dynamic content: model outputs structured data only, fixed template renders — stable style, fewer errors, less context. Local/stable asset & font URLs with failure fallbacks.
+- **Accessibility**: body contrast passes; states not by color alone; keyboard operable with visible focus; alt text on meaningful images; respects reduced-motion.
 
-**窄宽度优先验证**：
-
-- 叙事界面常显示在聊天栏或手机中，可用宽度可能只有 360px 左右。
-- 窄宽度下重新组织布局，例如堆叠、页签、折叠，并保留焦点和主视觉，而不是等比缩小。
-
-**嵌入宿主时**（例如界面渲染在聊天消息中）：
-
-- 视口单位可能以内嵌框架为基准，而不是浏览器窗口。高度应由内容决定，避免依赖视口高度或父级高度；全屏和高度相关的布局要实际验证。
-- 同一界面可能在多条消息中重复渲染。控制图片体积、动画和脚本数量，避免多份同时运行导致卡顿。历史消息中的界面考虑以只读状态呈现，避免旧界面误改当前状态。
-- 界面可能在文本输出完成后才渲染，数据也可能尚未就绪。为加载阶段设计与作品一致的过渡外观，不要出现空白或闪烁。
-- 宿主样式和其他美化可能冲突。收敛样式作用域，不依赖全局样式。
-- 界面应在整段对话中持续存在并保持质量，不只出现在开场。
-- 动态内容由生成模型输出时，让模型只输出结构化数据，由固定模板渲染。这样风格保持稳定，也减少出错和上下文消耗。
-- 图片与字体使用项目本地资源或稳定地址，并准备加载失败时的兜底样式。
-
-**可读与无障碍**：
-
-- 正文对比度达标。
-- 状态不只靠颜色区分。
-- 交互可用键盘完成，并有可见焦点。
-- 有意义的图片提供替代文本。
-- 尊重"减少动态效果"偏好。
-
-**低质量表现**：
-
-- 只在桌面宽屏检查。
-- 手机上文字被截断，或出现横向滚动。
-- 重复渲染导致卡顿。
-- 依赖临时图床链接。
+**Failure signs**: desktop-only checks; clipped text or horizontal scroll on phone; jank from repeated renders; hotlinked temporary image URLs.
 
 ---
 
-## 7. 跨维度协调与取舍
+## 7. Cross-dimension coordination & tradeoffs
 
-### 协调原则
+1. One concept governs all choices — every element must state its part of the concept; else change or delete it.
+2. Physical setting consistency: shape, light, material, temperature, aging from one world.
+3. Style-strength budget: intensity concentrates at focal points, shell, key moments; reading/operating zones stay quiet; one bold move beats ten.
+4. Fusion depth varies by task (narrative deep, high-frequency clear).
+5. Shell unified, inner pages vary with content.
+6. Mood on the sensory channel, info on the clear channel.
+7. Uniform quality bar: uneven investment allowed, no region below the bar; cost cuts simplify within the language, never revert to defaults.
+8. Uniform precision: anything concrete in frame matches overall precision; a crude prop drags down refined typography around it — re-express via type/abstract graphics or use assets.
+9. Few ideas, executed precisely: perceived finish comes from a few elements done well, not metaphor count. One carrier + precise typography beats ten draft-precision props. Restraint applies to props/ornament, not illustration/color.
+10. Defaults must be chosen.
 
-1. **一个概念统领全部选择**：对任何视觉元素，都应能说出它表达了概念的哪一部分。说不出来的，修改或删除。
-2. **物理设定一致**：形状、光源、材质、色温和老化程度来自同一个世界。
-3. **风格强度有预算**：
-   - 强烈的风格集中在焦点、外壳和关键时刻。
-   - 阅读区和操作区保持安静。
-   - 大胆的手法用在一处，效果最强。
-4. **融合深度随任务变化**：叙事和展示区深度融入世界，高频决策区保持清晰。
-5. **外壳统一，内页随内容变化**：导航、边框、页签等外壳语法全局一致；各页内容的构图随信息含义变化，避免每页同一布局。
-6. **情绪走感官通道，信息走清晰通道**。
-7. **统一质量线**：
-   - 投入可以有轻重，焦点区使用最贵的素材和最多细节。
-   - 任何可见区域都不能低于同一完成度。
-   - 需要降低成本时，在设计语言之内简化：同一语法、更少细节，而不是退回默认组件。
-8. **精度一致**：画面里任何具象表现的东西，都要达到与整体相同的精度。一个粗糙的手绘道具，会拉低周围精细排版的观感。达不到精度时，用排版或抽象图形表达同一含义，或使用插画素材。
-9. **点子少而做精**：用户感受到的完成度，来自少数元素被做到位，而不是隐喻和道具的数量。宁可一个主载体加精确的排版，也不要十个各有创意、都只有草稿精度的道具。克制的对象是道具和装饰，不是插画与色彩：画面仍应由插画主导。
-10. **默认值必须经过决定**：浏览器默认外观、组件库默认样式、模型习惯的字体和配色，只有在被有意选择后才保留。
+Conflict priority: readable & operable (floor) > work identity > overall unity > local effect > implementation convenience.
 
-### 冲突时的优先顺序
-
-可读与可操作（底线）＞ 作品身份 ＞ 整体统一 ＞ 局部效果 ＞ 实现便利。
-
-| 冲突 | 处理方式 |
+| Conflict | Resolution |
 | --- | --- |
-| 装饰字体与正文可读 | 装饰字体只用于标题，正文用易读字体，用颜色、版式与世界内文字保留气质 |
-| 沉浸与操作效率 | 降低高频操作区的融合深度，保留形状语法与配色 |
-| 视觉效果与性能 | 在手机和多处重复渲染时，减少循环动效和大面积滤镜，保留静态质感 |
-| 美术投入与实现成本 | 焦点区使用专属素材，外围用 CSS 近似同一材质；不用默认组件替代 |
-| 具象表现与素材缺失 | 改用排版与抽象图形，或保留标注清楚的占位并说明缺少的素材；不用代码手绘代替插画 |
-| 写实材质与文字对比 | 文字区降低纹理强度，或加一层安静的底面 |
+| Decorative type vs body legibility | Display type for titles; legible body face; character via color/layout/in-world type |
+| Immersion vs operation efficiency | Lower fusion depth in high-frequency zones; keep shape grammar + palette |
+| Visual effect vs performance | Cut looping motion & large filters on mobile/multi-render; keep static texture |
+| Art investment vs cost | Focal area bespoke assets; periphery approximates same material in CSS; never default components |
+| Concrete representation vs missing assets | Typography/abstract rebuild, or clearly labeled placeholder + listed missing assets; never code-drawn substitutes |
+| Realistic material vs text contrast | Reduce texture under text, or add a quiet underlay |
 
 ---
 
-## 8. 失败模式速查
+## 8. Failure-mode quick reference
 
-| 表现 | 常见原因 | 修正 |
+| Symptom | Cause | Fix |
 | --- | --- | --- |
-| 题材氛围对，但没有属于这部作品的记忆点 | 从题材平均值出发 | 按 1.1 推导视觉身份，做相似提示测试 |
-| 几套界面结构相同，只换了配色 | 先有通用骨架，再套皮 | 从信息的原生形态和界面载体重建结构 |
-| 开场精致，进入功能页后变成默认暗底小字 | 美术投入只集中在首屏 | 主视觉延续到功能页，按统一质量线扩展 |
-| 外框有题材感，内部是通用卡片和进度条 | 只做了外壳 | 内部信息采用物件原生格式 |
-| 把旧的默认风格换成另一种流行风格 | 用禁用清单替代判断 | 从作品推导，不从"另一种好看风格"出发 |
-| 均匀高密度小字 | 信息没有分层 | 删减、分层披露，拉开层级 |
-| 霓虹发光、玻璃模糊、渐变到处都是 | 用效果代替材质与光源 | 确定真实材质和光源，效果只留在有理由的位置 |
-| 纹理、扫描线、噪点压在正文上 | 风格强度没有预算 | 在文字区减弱或移除 |
-| 素材画风、清晰度、光向不一致 | 素材直接拼贴 | 统一调色、颗粒、边缘与光向 |
-| 主视觉是占位图、空格子或贴上去的图片 | 素材计划缺失 | 确定核心素材的来源，设计空状态 |
-| emoji 图标、混用多套图标 | 图标没有纳入设计语言 | 统一线宽与风格，或改用题材符号 |
-| 浏览器默认的滚动条、焦点环、下拉框突兀 | 默认值未经决定 | 纳入组件家族 |
-| 无意义英文副标题、编号、全大写小标签 | 模板化装饰 | 删除，或改为编码真实信息的世界内文字 |
-| 每回合即兴生成的界面风格前后不一 | 展示没有固定模板 | 模型只输出数据，由固定模板渲染 |
-| 界面只在开场出现，后续回合消失 | 只设计了首次体验 | 设计贯穿整段对话的持续界面 |
-| 局部精美，整体像多个项目拼起来 | 各模块各自设计 | 用核心样板和设计记录统一语法，模块与样板并排检查 |
+| Right genre mood, no work-specific memory point | Genre-average starting point | Re-derive per §1.1; run similar-prompt test |
+| Several screens identical except palette | Generic skeleton + reskin | Rebuild structure from native info formats + carrier object |
+| Gorgeous opening, plain dark form pages after | Art budget spent on first screen only | Continue key visual into functional pages; uniform quality bar |
+| Genre shell, generic cards/progress bars inside | Shell only | Inner info in the object's native formats |
+| Old default swapped for a new trendy one | Ban-list instead of judgment | Derive from the work, not from "another pretty style" |
+| Uniform dense small text | No info layering | Cut, layer disclosure, widen hierarchy |
+| Neon glow / glass blur / gradients everywhere | Effects substituting material & light | Pick real materials + one light source; effects only where motivated |
+| Texture/scanlines/noise over body text | No style-strength budget | Reduce/remove under text |
+| Mismatched asset styles/sharpness/light | Assets collaged raw | Unify grading, grain, edges, light direction |
+| Key visual is placeholder, blank cell, or glued-on image | No asset plan | Fix asset sources; design empty states |
+| Emoji icons, mixed icon sets | Icons outside the language | Unify stroke/style, or switch to genre symbols |
+| Browser-default scrollbar/focus/select sticking out | Undecided defaults | Pull into the component family |
+| Meaningless English subtitles, numbering, all-caps micro-labels | Template decoration | Delete, or replace with in-world text encoding real info |
+| Per-turn generated UI style keeps changing | No fixed template | Model outputs data only; fixed template renders |
+| UI appears only at the opening | First-experience-only design | Design the persistent interface across the conversation |
+| Locally refined, overall reads like multiple projects | Per-module design | Unify via sample + record; side-by-side module checks |
 
-### AI 手搓游戏界面
+### The AI hand-made game-UI kit
 
-模型自己从零做游戏化界面时，常出现一种特有的粗糙感：每处都有想法，但每处都只有草稿精度，整体像程序员手搓的小游戏。下面这些表现在模型输出中反复出现，单个出现不一定是错，成群出现就是这种粗糙感的来源。
+Model-generated game UIs have a signature crudeness: an idea everywhere, draft precision everywhere. Any single item below is forgivable; in groups they produce the look.
 
-| 表现 | 修正 |
+| Tell | Fix |
 | --- | --- |
-| 用 CSS/SVG 几何块拼出的场景、建筑、山水、人物剪影当主视觉 | 换成插画素材；拿不到时改为排版主导的主视觉 |
-| 每个模块一个仿制道具：胶带便签、歪盖的红框印章、挂签、算盘珠、灶火、木牌 | 收回到一个主载体，只精做一两个关键道具 |
-| 默认的游戏化套件：米色纸面配深色石板面板、"急件 / 下品"式红框歪章、带边框的小标签串、壹贰叁或六边形步骤节点、雷达图、角标括号、渐变色主按钮 | 逐项问"它是否属于这部作品的设计语言"；不属于就换成从设计语言推出的形式 |
-| 用书法或手写体模仿"手写感"，大面积出现 | 只在真正代表人物亲笔的少量文字使用，并确认字体本身质量 |
-| 每个数值旁边都挂一个增减小标签，如"体力 -20""修为 +4" | 只在决策需要时显示，并用排版层级区分，而不是一串带框小标签 |
-| 想法很多，单个元素的精度很低 | 删掉一半想法，把剩下的做到素材级精度 |
+| CSS/SVG block-built scenes/architecture/landscapes/figure silhouettes as final key visual | Replace with illustration; if unavailable, typography-led key visual |
+| One simulated prop per module: tape notes, crooked red stamps, tags, abacus beads, stove fire, wooden plaques | Collapse to one carrier; one or two refined key props |
+| Default kit: beige paper + dark slate panels, "URGENT / LOW-GRADE" crooked stamps, bordered tag strings, Chinese-numeral or hex step nodes, radar charts, corner-bracket badges | Ask per element: does this belong to this work's language? If not, derive a replacement from the language |
+| Calligraphy/handwriting used broadly to fake "handwritten feel" | Reserve for genuinely autographic short text; verify the font itself |
+| A framed +/- delta tag on every value ("Stamina -20", "XP +4") | Show only where decisions need it; express via typographic hierarchy, not tag strings |
+| Many ideas, each at low precision | Halve the ideas; finish the rest to asset precision |
 
-### 过度克制
+### Over-restraint
 
-去掉道具和手绘之后，另一个常见结果是界面变得干净但素：画面里没有插画在说话。
+Removing props and hand-drawing often leaves a clean but plain UI where no picture speaks.
 
-| 表现 | 修正 |
+| Symptom | Fix |
 | --- | --- |
-| 插画只占一条顶栏，其余是深色面板、细线和文字 | 改用画面主导的构图方式，见 2.5；让插画成为面板下的底层，或在主要屏幕占据大部分面积 |
-| 全界面只允许一种强调色，其余都是同一种冷灰或深色 | 色彩可以克制，但要让插画带来色彩与明暗层次；强调色少，不等于画面没有颜色 |
-| 几张来源不同的图片装进方框并排，形成拼贴感 | 一屏一个主图，次要图像融入画面或成为统一的成组图版 |
-| 流程页做成"左标签、右输入"的表单 | 一步一屏，关键选项配插画，揭晓结果时给予画面上的高潮 |
-| 页面固定撑满视口高度，内容只占上半部分，下半是空的深色区域 | 高度由内容决定；需要满屏时让插画填满画面，而不是留空底色 |
-| 通用游戏图标和写实或古典素材放在一起，风格冲突 | 改用物品图版、照片局部或文字；只改图标颜色通常不够 |
-| 素材不够时，同一幅图的局部在多个模块里反复出现 | 减少图位，让没有专属图的模块靠排版完成；重复使用只限于有意的母题 |
+| Illustration confined to a top banner; rest is dark panels + hairlines + text | Switch to a picture-led composition (§2.5): illustration as base layer under panels, or owning most of the screen |
+| One accent color allowed, everything else one cold gray/dark | Restraint in color ≠ absence of pictures; let illustration carry color and value range |
+| Differently-sourced images boxed side by side | One hero image; secondaries blended or a uniform plate set |
+| Flow page as left-label/right-input form | One step per screen; illustrated key options; visual climax at reveal |
+| Page forced to 100vh with content only in the top half | Height follows content; when full-height is needed, let illustration fill it |
+| Generic game icons beside photographic/classical assets | Switch to item plates, photo crops, or text; recoloring alone rarely suffices |
+| Same image crop reused across modules when assets run short | Reduce image slots; let typography carry modules without bespoke art; repetition only as deliberate motif |

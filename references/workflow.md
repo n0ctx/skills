@@ -1,208 +1,186 @@
-# 渐进式设计与实施工作流
+# Staged design & build workflow
 
-复杂任务按本文推进：多屏或多模块、从零构建、需要专属素材，或用户要求作品级完成度。中等任务按"任务分级"压缩阶段；简单任务不读本文。
+Applies to complex tasks (multi-screen, from scratch, bespoke assets, finished-product quality). Medium tasks compress the stages; simple tasks skip this file.
 
-## 目录
+## Why stages
 
-1. 为什么分阶段
-2. 任务分级
-3. 阶段总览
-4. 各阶段要点
-5. 视觉复查方法
-6. 回退规则
-7. 设计记录
-8. 成本控制
+Building all screens at once spreads attention evenly: everything works, nothing looks finished. The alternative: set direction, finish one block to production quality, use it to prove the direction and derive rules, then bring everything else up to it.
 
-## 1. 为什么分阶段
+Stages are quality gates with visible pass/fail criteria, not report checkpoints. Design dimensions are NOT build order: color, type, shape, material are decided together within a stage, never "all colors then all fonts."
 
-一次铺开全部页面时，注意力会平均摊到每个角落：功能齐了，视觉却停在"能用"。精品作品的做法相反：先定方向，再把一块做到成品水准，用它证明方向可行，并从中提炼规则，其余部分向它看齐。
+## Compression by task level
 
-分阶段的意义在于每一步都有能用眼睛判断的成果和门槛，而不是把任务切成更多小块。设计维度不是施工顺序：颜色、字体、边框、材质在同一阶段协同决定，不要先做完全部颜色再做全部字体。
+- **Complex**: all six stages + persistent design record.
+- **Medium**: direction set inline in chat (still writes the record, minus progress log); composition+sample merged into "focal area first"; extension still holds the sample's quality bar; polish+acceptance merged into one review round.
+- **Single page carrying the whole identity** (e.g. an opening screen): stages 1–3 in full.
 
-## 2. 任务分级
+## Stage overview
 
-级别定义见 SKILL.md。按级别使用本流程：
-
-- **复杂任务**：完整执行六个阶段，并保留设计记录。
-- **中等任务**：压缩阶段。
-  - 定调只写在对话中，不建设计记录。
-  - 构图与样板合并为"先把焦点区域做到位"。
-  - 扩展时仍按焦点区域的质量线补全页面。
-  - 精修与验收合并为一轮复查。
-- **承担全部美术身份的单页**，例如开场页：前三个阶段按复杂任务处理。
-
-## 3. 阶段总览
-
-| 阶段 | 目的 | 产出 | 通过标准 |
+| # | Stage | Output | Pass gate |
 | --- | --- | --- | --- |
-| 1 设计定调 | 确定作品是什么 | 设计记录初稿 | 能说清"记住什么、为何属于这部作品"；通过相似提示测试 |
-| 2 整体构图 | 确定空间与主次 | 真实内容的灰阶页面 | 缩略图中主次清楚；最长内容不破版；关键操作可达 |
-| 3 核心样板 | 用成品证明方向 | 一个区域达到交付精度 | 看起来已是成品；从样板提炼出可复用的规则 |
-| 4 分模块扩展 | 按同一质量线铺开 | 逐个完成的模块 | 与样板并排时像同一作品、同一完成度 |
-| 5 整体精修 | 统一并收口 | 跨模块修正 | 一致性与细节检查无明显问题 |
-| 6 最终验收 | 在真实环境中确认 | 截图与验证结论 | 主要交互、目标宽度、加载失败兜底都已实测 |
+| 1 | Direction | Design record v1 | Can state memory point + why it belongs to this work; survives the similar-prompt test |
+| 2 | Composition | Grayscale page with real content | Thumbnail shows clear hierarchy; longest content fits; key actions findable |
+| 3 | Core sample | One region at delivery quality | Looks finished to an outsider; reusable rules extracted into the record |
+| 4 | Module extension | Modules one by one | Each passes side-by-side comparison with the sample |
+| 5 | Polish | Cross-module fixes | Consistency + detail checks clean |
+| 6 | Acceptance | Verified in real environment | Main flows, target widths, failure fallbacks all tested |
 
-阶段之间不必等待用户确认。只有方向性歧义（例如作品定位有两种合理但互不兼容的理解）才在第 1 阶段询问。
+Do not wait for user confirmation between stages. Ask only at stage 1 when two reasonable, incompatible interpretations of the work's positioning exist.
 
-## 4. 各阶段要点
+## Stage details
 
-### 阶段 1：设计定调
+### Stage 1 — Direction
 
-先回答四个问题，写进设计记录：
+Answer four things, write them into the record:
 
-1. **界面身份**：这个界面在故事中是什么物件或系统，谁制作，谁在阅读。见 [design-knowledge.md](design-knowledge.md) 第 1 节。
-2. **记忆点**：用户关掉页面后最该记住的一个画面或一种手感，它必须来自这部作品的具体设定。
-3. **设计语言**：色彩角色、字体声音、形状与线条语法、光源与材质、图像计划、动效性格。这些一起决定，彼此印证。
-4. **不做什么**：针对这部作品，写下最容易落入的题材公式和通用默认做法。这是本作品的排除项，不是全局禁用清单。
+1. **Interface identity**: what object/system is this in-story, made by whom, read by whom (see design-knowledge.md §1).
+2. **Memory point**: the one image or feel the user should remember after closing the page; must come from this work's specific setting.
+3. **Art direction**: color roles, type voices, shape/line grammar, light & material, image plan, motion character — decided together, cross-referenced.
+4. **Exclusions**: the genre formulas and generic defaults this specific work must avoid. This is a per-work list, not a global ban list.
 
-**相似提示测试**：设想把同题材的另一个普通需求交给 Agent，会不会得到几乎相同的方案？如果会，说明方向来自题材平均值，回到人物、地点、事件和道具里找差异。
+**Similar-prompt test**: would another ordinary request in the same genre produce nearly the same design? If yes, the direction is a genre average — go back to characters, places, events, props for differentiation.
 
-**素材计划**在此阶段完成：
+**Asset plan** (same stage): list every concrete-art item (key visual, characters, scenes, key objects) with purpose, ratio, crop, transparency needs, and source (existing → AI → web). Write the single shared style description (medium, brushwork, light direction, palette, clarity) — every later generation request reuses it verbatim. Prep sample assets only; no batch production. Verify availability before committing: if no AI tool and no licensed web assets fit, choose a direction the collectible assets can actually support, or tell the user now.
 
-- 列出全部具象美术：主视觉、人物、场景、关键物品。为每项写明用途、比例、裁切、留白、透明需求和来源（已有资源、AI 生图、网络收集）。
-- 写一段全作品共用的画风描述：媒介、笔触、光源方向、色调、清晰度。之后所有生成请求都复用它，收集素材时也以它为筛选标准。
-- 先为第 3 阶段的样板准备素材，不要一开始批量制作。
-- 确认素材是否拿得到：没有生图工具时，先检查网络上能否找到画风合适、许可明确的素材，并按收集得到的素材选择能统一的画风。都不可行时，尽早告诉用户，不要等到最后才发现主视觉只能占位。
+### Stage 2 — Composition
 
-### 阶段 2：整体构图
+- Build all major regions with real content: actual-length text, longest names/numbers, empty states, multi-item lists. Image slots get size/crop-correct placeholders (color blocks or quick concept sketches) — they validate composition only.
+- Handle only position, area, value masses, reading order, key-action placement. No decoration or material yet.
+- Place illustration placeholders at final area and layer: where is the full-bleed base, where does the character cross panels. Do not pre-shrink art into a top banner.
+- Render at target widths, including narrow/embedded, and screenshot.
+- **Gate**: thumbnail/squint shows 2–3 value masses with the focal point in the planned place; reading order matches importance; no overflow on longest content; primary action needs no searching.
 
-- 用真实内容搭建全部主要区域：真实长度的中文、最长的人名和数值、空状态、多条目。图片位置用与计划尺寸和裁切一致的占位：色块，或用代码快速画的概念草图。这些占位只用来验证构图，不需要打磨。
-- 只处理位置、面积、明暗分区、阅读顺序和关键操作位置，不做装饰和材质。过早打磨会让后续调整构图变得昂贵，也会掩盖构图问题。
-- 插画占位要按终版的面积和层次摆放：哪里是全幅底图，哪里是出血主图，人物在哪里越过面板。不要先把插画压缩成一条顶栏，等后期再想办法加画面。
-- 在目标宽度渲染并截图，包括嵌入聊天栏的窄宽度或手机宽度。
-- 通过标准：缩小到缩略图或眯眼看时，只剩 2～3 个主要色块，焦点落在计划位置；阅读顺序与信息重要性一致；最长内容不溢出；主操作无需寻找。
+If composition fails, do not proceed. Detail cannot rescue bad big relationships.
 
-构图不成立时，不进入下一阶段。靠后期细节无法补救大关系的问题。
+### Stage 3 — Core sample
 
-### 阶段 3：核心样板
+**Pick the region** that best represents the work's identity AND is hardest — usually where key visual meets primary reading/operation (opening + first interactive panel, or one panel containing all states). Never the easiest corner.
 
-**选区**：选最能代表作品身份、同时最难的一块，通常是主视觉与主要阅读或操作区域相交的地方，例如开场主画面加第一个交互面板，或一个包含全部状态的核心面板。不要选最容易的角落。
+**Finish to delivery quality**:
+- All concrete art replaced with final illustration assets (generated or collected), cropped, graded, edge-blended. No code-drawn scenes/people/objects remain.
+- Type: fonts, weights, line-height, tracking set; long Chinese text actually typeset.
+- Material, light, borders, ornament per the art direction.
+- Full interaction states: hover, focus, active, disabled, loading, empty, selected.
+- Motion, target-width adaptation, Chinese line-breaking handled.
 
-**做到交付精度**：
+**Gate**:
+- An outsider seeing a screenshot would assume it's a finished product, not programmer-made game UI.
+- No element in frame is visibly cruder than the rest.
+- Reads as a picture at thumbnail size (mostly illustration, not dark panels + text); no collage of boxed images.
+- Clearly belongs to this work, not any same-genre work.
+- Readability and operation not sacrificed.
 
-- 样板中的具象美术全部替换为终版插画素材（生成或收集），并完成裁切、调色和边缘融合。样板里不保留代码手绘的场景、人物或器物。
-- 字体、字重、行距、字距到位，中文长文本实际排过。
-- 材质、光影、边框和装饰按设计语言实现。
-- 交互状态齐全：悬停、焦点、按下、禁用、加载、空状态、选中。
-- 动效、目标宽度适配和中文断行都已处理。
+**Extract rules**: after the sample passes, derive reusable rules from the actual artifact and write them into the record's token registry: color variables + roles, type scale, line widths, radius/cut grammar, shadow & light direction, material usage, motion durations + easing. Rules extracted from a finished artifact beat rules invented upfront. **Then freeze the registry** (anti-drift rule 2).
 
-**通过标准**：
+**Rollback**: if two fix rounds still fail to look finished, diagnose. If direction or assets can't support it, return to stage 1 and tell the user. Do not silently degrade to plain styling, and do not polish code-drawn art as a substitute for missing assets.
 
-- 不了解开发过程的人看截图，会以为这是成品，而不是程序员手搓的小游戏界面。
-- 画面中没有精度明显低于整体的元素。
-- 有画面感：缩小看时，画面主要由插画构成，而不是由深色面板和文字构成；没有几张图片方框并排的拼贴感。
-- 它明显属于阶段 1 定下的作品，而不是任何同题材作品。
-- 可读性和操作没有为效果让步。
+### Stage 4 — Module extension
 
-**提炼规则**：样板通过后，从实际做出的成品中整理可复用的规则写回设计记录，例如颜色变量与用途、字号层级、线宽、圆角或切角语法、阴影与光向、材质用法、动效时长与缓动。规则从成品里提炼，比事先凭空规定更准确。
+Group by function + visual relation (opening & onboarding, main play screen, archive tabs, modals/toasts). One module at a time:
 
-**回退**：两轮修正后仍达不到成品感，先判断原因。若是方向本身成本过高或素材无法支撑，回到阶段 1 调整方向，并向用户说明。不要悄悄降级成普通样式，也不要用打磨代码手绘美术来代替缺失的素材。
+1. **Local design**: what in-world format this module's info takes. Reuse the sample's carrier and grammar; differentiate via layout, typography, assets — do not invent a new prop per module. Vary composition with content meaning; don't apply one card layout everywhere.
+2. **Implement.**
+3. **Screenshot and compare side-by-side with the sample**: same world, same quality bar.
+4. **Fix, then next module.**
 
-### 阶段 4：分模块扩展
+**Module pass criteria**: no default components or browser-native styling; no placeholders or code-drawn concrete art; full states; matches sample quality bar.
 
-按功能和视觉关联划分模块，例如开场与建档流程、主游玩界面、档案页签、弹窗与提示。每次只推进一个模块：
+**Watch for three drifts**:
+- New colors/radii/shadows sneaking in (check against the registry).
+- All modules converging to one layout.
+- Later modules getting plainer (the classic opening-gorgeous, body-plain collapse).
 
-1. **局部设计**：这个模块的信息在世界里用什么格式与语汇呈现。沿用样板的主载体和语法，靠版式、排版和素材体现差异，不要给每个模块新造一个道具。构图应随内容含义变化，不要每个模块套同一个卡片布局。
-2. **实现**。
-3. **截图并与样板并排比较**：是否同一世界、同一完成度。
-4. **修正后再进入下一模块**。
+If a module exposes a gap in the language (sample didn't cover tables/long lists), extend the registry in the record first — and fix the sample if needed — before continuing.
 
-**模块完成标准**：
+### Stage 5 — Polish
 
-- 没有回退到默认组件或浏览器原生样式。
-- 没有占位图片，也没有代码手绘的具象美术。
-- 状态齐全。
-- 与样板的质量线一致。
+Screenshot all screens + key states side by side, four passes:
 
-需警惕三种漂移：
+1. **Consistency**: light direction, line width, radius/cut, color temperature, asset style & sharpness, type roles.
+2. **Detail**: alignment, border junctions, image edges, text-image spacing, punctuation/wrapping, scrollbars, focus rings, selection color, form controls.
+3. **Deletion**: remove ornaments that carry no info and serve no mood; remove props/graphic visibly cruder than the rest. Refinement comes from restraint, not quantity.
+4. **Motion & feedback**: consistent rhythm; no missing or excessive animation.
 
-- **新颜色、新圆角、新阴影逐渐混入**。
-- **所有模块变成同一个布局**。
-- **越往后越朴素**。精品卡最常见的失败，就是开场精致、进入正文后退化成默认暗底小字，或只剩深色面板和文字。
+Composition- or direction-level problems found here go back to stage 2/1 — don't paper over them with detail.
 
-若新模块暴露出设计语言的缺口（例如样板没有覆盖表格或长列表），先在设计记录中补充规则，必要时回头修正样板，再继续。
+### Stage 6 — Acceptance
 
-### 阶段 5：整体精修
+- Test in the real runtime; if embedded in chat/host page, test embedded, not standalone.
+- Walk main flows at target widths.
+- Check font/image load-failure fallbacks, console errors, re-render performance.
+- No leftover placeholders. If an asset truly can't be obtained, list it in delivery with the required generation spec.
+- With subagent + vision available, have a fresh-context reviewer look only at screenshots and answer: "does this look like a production with dedicated art polish?" plus their three roughest spots. Do NOT let the reviewer score by counting metaphors/props — that rewards prop-stacking. Self-review runs lenient; independent review catches what habit hides.
 
-将全部屏幕和关键状态截图并排查看，依次做四遍检查：
+## Visual review method
 
-1. **一致性**：光源方向、线宽、圆角或切角、色温、素材画风与清晰度、字体角色是否统一。
-2. **细节**：对齐、边框交接、图片边缘、文字与图片的留白、标点与断行、滚动条、焦点环、选中色、表单控件。
-3. **删减**：去掉不承载信息、也不服务氛围的装饰，以及精度明显低于整体的道具和图形。精致来自收口，不来自数量。
-4. **动效与反馈**：各处节奏是否一致，是否有遗漏或过度的动画。
+Screenshot-based, largest first, per round:
 
-精修中发现构图或方向层面的问题时，回到对应阶段处理，不在精修阶段堆细节掩盖。
+1. **First glance** (thumbnail ~1s): where does the eye land; is it the planned focus; is there something memorable and specific to this work.
+2. **Squint**: 2–3 value masses, hierarchy holds, density varies; mostly illustration vs mostly dark panels.
+3. **Cover the title**: still this work, or any same-genre template.
+4. **Side-by-side**: one art direction across regions (light, line, material, style, temperature).
+5. **Actual size**: Chinese body type size/contrast/line-length/leading/mixed CJK-Latin.
+6. **Edges**: alignment, overflow, image edges, mask transitions, browser-native chrome, empty/loading states.
+7. **Interaction**: hover/focus/active/disabled/loading feedback and motion timing.
+8. **Target width**: narrow/embedded layout, touch size, no clipped text.
 
-### 阶段 6：最终验收
+Priority: direction > composition > core art > consistency > readability > detail. Fix only the top 1–3 issues per round; re-screenshot. Max two rounds per stage.
 
-- 在真实运行环境中检查。若界面嵌入聊天或宿主页面，就在嵌入状态下检查，不只看独立页面。
-- 在目标宽度下走一遍主要交互流程。
-- 检查字体或图片加载失败时的兜底效果、控制台错误，以及重复渲染时的性能。
-- 确认没有遗留占位素材。素材确实无法获得时，在交付中列出仍为占位的位置、所需素材和生成要求。
-- 复杂任务在具备子代理和看图能力时，可让一个新上下文的评审者只看截图，判断它像不像经过专门美术打磨的成品，并指出最粗糙的三处。不要让评审按隐喻或题材元素的数量打分：那会奖励道具堆砌，而不是完成度。自评容易偏宽，独立评审能发现被习惯掩盖的问题。
+Before each fix session, save a rollback point (commit/backup). If a fix makes things worse, roll back; don't stack fixes on a bad result.
 
-## 5. 视觉复查方法
+If the main model can't see images, reuse a vision tool or delegate to a vision-capable subagent; report only what was actually verified.
 
-视觉复查必须基于实际渲染截图。每轮按从大到小的顺序检查，先处理影响最大的问题：
+## Rollback rules
 
-1. **第一眼**（缩略图，约 1 秒）：视线先落在哪里？那里是否是计划的焦点？是否有值得记住、且属于这部作品的东西？
-2. **眯眼**（模糊或缩小）：明暗大块是否清楚，主次是否只剩 2～3 层，密度是否有疏有密；画面主要由插画构成，还是只剩深色面板与文字。
-3. **遮住标题**：遮掉标题和角色名后，还能认出是这部作品吗？还是像任意同题材模板？
-4. **并排比较**：各区域是否像同一套美术，光向、线条、材质、画风、色温是否统一。
-5. **原尺寸阅读**：中文正文字号、对比度、行长、行距、断行，以及中英混排。
-6. **边缘与收口**：对齐、溢出、图片边缘、遮罩过渡、浏览器默认外观、空状态与加载状态。
-7. **实际操作**：悬停、焦点、按下、禁用、加载的反馈与动效时机。
-8. **目标宽度**：窄屏与嵌入宽度下的布局、触控尺寸、文字是否被裁切。
-
-问题按影响排序：**方向 > 构图 > 核心美术 > 一致性 > 可读性 > 细节**。每轮只修最重要的 1～3 项，修完重新截图。每个阶段最多复查两轮。
-
-修改前保留可回退的状态，例如提交或备份文件；修改后若明显变差就回滚，不在坏结果上继续叠加修改。
-
-若主模型不能看图，可复用已有视觉工具或有视觉能力的子代理；无法看图时，只报告实际验证过的部分。
-
-## 6. 回退规则
-
-| 触发情况 | 回到 |
+| Trigger | Return to |
 | --- | --- |
-| 样板两轮仍不像成品，且原因是方向或素材 | 阶段 1 |
-| 扩展中多个模块装不下现有构图或信息层级 | 阶段 2 |
-| 新模块需要的语言样板没有覆盖 | 补设计记录；必要时更新样板 |
-| 精修时发现主次或焦点错误 | 阶段 2 |
-| 同一问题修正两次仍未改善 | 停下，重新诊断原因，不再叠加同类修改 |
+| Sample still not finished after two rounds, cause = direction/assets | Stage 1 |
+| Multiple modules don't fit composition or info hierarchy | Stage 2 |
+| Module needs language the sample didn't cover | Extend record; update sample if needed |
+| Polish finds hierarchy/focus errors | Stage 2 |
+| Same issue fixed twice without improvement | Stop; re-diagnose cause; no more same-class fixes |
 
-回退只重做受影响的部分，已经成立的部分保留。
+Rollback redoes only the affected part; finished parts stay.
 
-## 7. 设计记录
+## Design record
 
-跨会话或多模块的任务，在项目中保留一份简短的设计记录。若项目已有设计文档，就写入其中；否则在前端代码旁新建一个文件。它的作用是让后续阶段和后续会话沿用同一意图，不是给用户的设计报告。
+For any cross-session or multi-module task, keep one short record next to the frontend code (or in the project's existing design doc). Its job is continuity of intent across stages and sessions, not a user-facing report. One page max; every line checkable yes/no; rewrite in place when rules change — no changelog.
 
 ```markdown
-# <作品名> 设计记录
+# <Work> Design Record
 
-## 概念
-- 界面身份：<物件或系统>，由 <谁> 为 <谁> 制作
-- 记忆点：<一句话>
-- 支柱：<2～3 条可检查的原则>
-- 不做：<本作品要避开的题材公式与默认做法>
+## Concept
+- Interface identity: <object/system>, made by <whom>, read by <whom>
+- Memory point: <one sentence>
+- Pillars: <2–3 checkable principles>
+- Exclusions: <genre formulas & defaults this work avoids>
 
-## 设计语言（样板通过后从成品提炼）
-- 色彩角色：<底 / 面 / 文字 / 强调 / 状态，以及强调色的使用范围>
-- 字体声音：<标题 / 正文 / 数据 / 世界内文字>
-- 形与线：<线宽、圆角或切角、装饰母题>
-- 光与材质：<光源方向、材质及使用位置>
-- 图像：<共用画风描述；素材清单、来源、许可与处理方式；仍为占位的项目>
-- 动效：<性格、时长范围、缓动>
+## Art direction (frozen after sample passes)
+- Shared style description: <medium / brushwork / light direction / palette / clarity>
+- Color roles: <bg / surface / text / accent / state + accent usage limits>
+- Type voices: <display / body / data / in-world>
+- Shape & line: <line widths, radius/cut levels, ornament motifs>
+- Light & material: <light direction, materials and where used>
+- Image: <asset list with source, license, treatment; placeholders remaining>
+- Motion: <character, duration range, easing>
 
-## 进度
-- 样板：<区域、状态、截图位置>
-- 模块：<名称 — 完成 / 进行中 / 待做，以及已知问题>
+## Token registry (the only allowed values; frozen after stage 3)
+- colors: ...
+- radii: ...
+- line-widths: ...
+- type scale: ...
+- spacing scale: ...
+- shadows: ...
+- motion durations/easing: ...
+
+## Progress
+- Sample: <region, status, screenshot path>
+- Modules: <name — done / in progress / todo + known issues>
 ```
 
-保持在一页以内，每条都应能用"是 / 否"检查。规则发生变化时直接改写，不累积修改历史。
+## Cost control
 
-## 8. 成本控制
-
-- 阶段是质量门槛，不是汇报节点。连续推进，不为每个阶段单独写报告或等待确认。
-- 截图只为当前阶段的判断服务，复用同一个浏览器会话。
-- 生图和素材收集按素材计划分批进行：先满足样板，再按模块补充。不批量生成与构图无关的装饰图。
-- 不新增构建工具、服务或依赖来执行本流程。
+- Stages are gates, not report points. Proceed continuously; no per-stage reports or waiting.
+- Screenshots serve the current decision only; reuse one browser session.
+- Asset generation/collection in batches per the asset plan: sample first, then per module. No batch decorative art unrelated to composition.
+- No new build tooling, services, or dependencies for this process.
