@@ -1,0 +1,133 @@
+#!/bin/bash
+# Drive the local Microsoft Edge login state through a separate automation
+# profile, then forward commands to agent-browser over CDP.
+# Never launches against Edge's default user-data directory.
+set -euo pipefail
+
+SRC="${HOME}/Library/Application Support/Microsoft Edge"
+DEST="${HOME}/.agent-browser/edge-user-data"
+PORT=9333
+AB="/opt/homebrew/lib/node_modules/agent-browser/bin/agent-browser-darwin-arm64"
+if command -v agent-browser >/dev/null 2>&1; then
+  AB="$(command -v agent-browser)"
+fi
+
+if [[ ! -x "$AB" ]]; then
+  echo "agent-browser binary not found: $AB" >&2
+  exit 1
+fi
+if [[ ! -x "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" ]]; then
+  echo "Microsoft Edge is not installed" >&2
+  exit 1
+fi
+
+headed=0
+args=()
+for a in "$@"; do
+  if [[ "$a" == "--headed" ]]; then
+    headed=1
+  else
+    args+=("$a")
+  fi
+done
+
+proc_using_dir() {
+  local dir="$1"
+  ps -ax -o args= | grep -F -- "--user-data-dir=${dir}" | grep -F "Microsoft Edge" | grep -v grep || true
+}
+
+cdp_up() {
+  curl -sf --max-time 1 "http://127.0.0.1:${PORT}/json/version" >/dev/null 2>&1
+}
+
+cookie_rows() {
+  python3 - "$1" <<'PY'
+import sqlite3, sys
+try:
+    con = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+    print(con.execute("select count(*) from cookies").fetchone()[0])
+except Exception:
+    print(0)
+PY
+}
+
+refresh_from_edge() {
+  if [[ -n "$(proc_using_dir "$SRC")" || -n "$(proc_using_dir "$DEST")" ]]; then
+    return 0
+  fi
+  local src_cookies="${SRC}/Default/Cookies"
+  [[ -f "$src_cookies" ]] || return 0
+  local rows
+  rows="$(cookie_rows "$src_cookies")"
+  mkdir -p "${DEST}/Default"
+  # An empty source must not wipe a profile that already has session data.
+  if [[ "$rows" == "0" ]]; then
+    return 0
+  fi
+  local dest_cookies="${DEST}/Default/Cookies"
+  if [[ -f "$dest_cookies" && ! "$src_cookies" -nt "$dest_cookies" ]]; then
+    return 0
+  fi
+  cp "${SRC}/Local State" "${DEST}/Local State"
+  cp "$src_cookies" "$dest_cookies"
+  [[ -f "${SRC}/Default/Preferences" ]] && cp "${SRC}/Default/Preferences" "${DEST}/Default/Preferences"
+  [[ -f "${SRC}/Default/Secure Preferences" ]] && cp "${SRC}/Default/Secure Preferences" "${DEST}/Default/Secure Preferences"
+  if [[ -d "${SRC}/Default/Local Storage" ]]; then
+    rm -rf "${DEST}/Default/Local Storage"
+    cp -R "${SRC}/Default/Local Storage" "${DEST}/Default/Local Storage"
+  fi
+}
+
+ensure_browser() {
+  if cdp_up && [[ -n "$(proc_using_dir "$DEST")" ]]; then
+    return 0
+  fi
+  if cdp_up; then
+    echo "127.0.0.1:${PORT} is already in use; refusing to attach" >&2
+    exit 1
+  fi
+  refresh_from_edge
+  mkdir -p "${DEST}/Default"
+  if [[ -z "$(proc_using_dir "$DEST")" ]]; then
+    rm -f "${DEST}/SingletonLock" "${DEST}/SingletonSocket" "${DEST}/SingletonCookie"
+  fi
+  local -a launch=(
+    --remote-debugging-port="${PORT}"
+    --remote-allow-origins=*
+    --user-data-dir="${DEST}"
+    --profile-directory=Default
+    --no-first-run
+    --no-default-browser-check
+  )
+  if [[ "$headed" -eq 0 ]]; then
+    launch=(--headless=new "${launch[@]}")
+  fi
+  open -na "Microsoft Edge" --args "${launch[@]}" about:blank
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    if cdp_up; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "Edge debugging port ${PORT} did not open" >&2
+  exit 1
+}
+
+if [[ ${#args[@]} -eq 0 ]]; then
+  echo "usage: agent-browser-edge <agent-browser args>" >&2
+  exit 1
+fi
+
+if [[ "${args[0]}" == "close" ]]; then
+  if cdp_up; then
+    "$AB" --cdp "${PORT}" close || true
+  fi
+  if [[ -n "$(proc_using_dir "$DEST")" ]]; then
+    pkill -f -- "--user-data-dir=${DEST}" || true
+  fi
+  exit 0
+fi
+
+ensure_browser
+exec "$AB" --cdp "${PORT}" "${args[@]}"
