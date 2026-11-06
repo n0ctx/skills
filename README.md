@@ -1,46 +1,48 @@
 # Skills
 
-个人 Agent Skill 集合。每个技能是一个独立目录，`SKILL.md` 为该技能入口。
+[中文](README.zh-CN.md)
 
-## 技能索引
+Personal collection of agent skills. Each skill is a self-contained directory, with `SKILL.md` as its entry point.
 
-| 技能 | 用途 |
+## Index
+
+| Skill | Purpose |
 |---|---|
-| dag-engineering | 大规模多会话工程的规划与控制 |
-| guard-ratchet | 落地棘轮式源码守卫（复杂度、死代码、重复、N+1、循环依赖、测试形状） |
-| software-architecture | 软件架构任务（边界、权衡、迁移、架构决策） |
-| software-engineering | 编码、调试、配置、测试、评审 |
-| tavern-aesthetic | 角色扮演 / 互动小说 / 叙事型网页的沉浸式界面设计 |
-| writing-for-agents | 撰写与改进 agent 要阅读执行的文本（prompt、SKILL.md、AGENTS.md、handoff） |
+| dag-engineering | Planning and control for large multi-session engineering work |
+| guard-ratchet | Ratchet-style source guards: complexity, dead code, duplication, N+1, cycles, test shape |
+| software-architecture | Architecture work: boundaries, trade-offs, migrations, decision records |
+| software-engineering | Coding, debugging, configuration, testing, review |
+| tavern-aesthetic | Immersive UI design for role-play, interactive fiction, and narrative pages |
+| writing-for-agents | Writing and revising text agents read and execute: prompts, SKILL.md, AGENTS.md, handoffs |
 
-## 安装
+## Install
 
 ```bash
 git clone https://github.com/n0ctx/skills.git ~/Projects/skills
-~/Projects/skills/scripts/link.sh          # 链接到 ~/.agents/skills
-~/Projects/skills/scripts/link.sh --dry-run # 只看会改什么
+~/Projects/skills/scripts/link.sh           # link into ~/.agents/skills
+~/Projects/skills/scripts/link.sh --dry-run # preview changes only
 ```
 
-`link.sh` 把 `skills/<name>` 软链到 `~/.agents/skills/<name>`，已被识别为技能的目录（含 `SKILL.md`）才会链接，不覆盖实体目录。
+`link.sh` symlinks `skills/<name>` into `~/.agents/skills/<name>`. Only directories recognized as skills (containing `SKILL.md`) are linked, and existing real directories are never overwritten.
 
-## 更新
+## Update
 
 ```bash
 cd ~/Projects/skills && git pull
 ```
 
-软链指向目录内部，pull 后所有 Agent 立即生效，无需重新安装。
+Symlinks point inside the skill directories, so every agent picks up changes after a pull. No reinstall needed.
 
-## 目录约定
+## Layout
 
 ```
 skills/
 └── <name>/
-    ├── SKILL.md          # 必需，YAML frontmatter 含 name/description
-    ├── references/       # 可选，按需加载的参考文档
-    └── scripts/          # 可选，可执行脚本
+    ├── SKILL.md          # Required; YAML frontmatter with name/description
+    ├── references/       # Optional; docs loaded on demand
+    └── scripts/          # Optional; executable scripts
 ```
 
-## 许可
+## License
 
-各技能目录下的 LICENSE 为准；未声明者版权归作者所有。
+See the LICENSE file in each skill directory. Skills without one are all rights reserved.
