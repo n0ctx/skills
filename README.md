@@ -12,8 +12,6 @@
 | software-engineering | 编码、调试、配置、测试、评审 |
 | tavern-aesthetic | 角色扮演 / 互动小说 / 叙事型网页的沉浸式界面设计 |
 | writing-for-agents | 撰写与改进 agent 要阅读执行的文本（prompt、SKILL.md、AGENTS.md、handoff） |
-| agent-browser-edge | 复用本机 Edge 登录态的浏览器自动化封装 |
-| macos-maintenance | macOS 周期性体检与优化（只读扫描 → 报告 → 确认 → 修复） |
 
 ## 安装
 
