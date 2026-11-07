@@ -1,16 +1,16 @@
 # software-architecture
 
-Agent skill for structural decisions and trade-offs: boundaries, distributed state and failure, evolving existing systems, decision records. Not for routine coding; that stays with [software-engineering](https://github.com/n0ctx/software-engineering). The two skills are independent and loading one does not cancel the other.
+Agent skill for structural decisions and trade-offs: boundaries, distributed state and failure, evolving existing systems, decision records. Not for routine coding; that stays with [software-engineering](../software-engineering/). The two skills are independent and loading one does not cancel the other.
 
 ## Install
 
-Clone straight into the skills directory your agent reads:
+Install just this skill, globally:
 
-```sh
-git clone https://github.com/n0ctx/software-architecture.git ~/.agents/skills/software-architecture
+```bash
+npx skills add n0ctx/skills --skill software-architecture -g
 ```
 
-`SKILL.md` is at the repository root, so the clone is the skill. `references/` is loaded only when `SKILL.md` says to.
+`SKILL.md` lives at `skills/software-architecture/SKILL.md` in the monorepo. `references/` is loaded only when `SKILL.md` says to.
 
 A same-named copy in a higher-precedence directory (for example `~/.hermes/skills/`) hides this one. Keep one visible copy. Hermes also needs `skills.external_dirs` to include `~/.agents/skills`.
 
@@ -23,5 +23,3 @@ No eval plan yet; this release is a candidate, not a measured improvement. Curre
 ```
 /plugin install software-architecture --marketplace n0ctx/skills
 ```
-
-Or with the skills CLI: `npx skills add n0ctx/skills --skill software-architecture -g`

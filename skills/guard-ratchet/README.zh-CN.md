@@ -34,14 +34,20 @@ skill 不会一股脑全上，而是按仓库实际情况挑选，例如没有�
 
 ## 安装
 
-skill 是一个目录，核心是 `SKILL.md`。放到你的 agent 会读取 skill 的位置即可：
+只装本技能（用户级）：
 
 ```bash
-git clone https://github.com/n0ctx/guard-ratchet ~/.agents/skills/guard-ratchet
-
-# Claude Code 读取 ~/.claude/skills/
-ln -s ~/.agents/skills/guard-ratchet ~/.claude/skills/guard-ratchet
+npx skills add n0ctx/skills --skill guard-ratchet -g
 ```
+
+或从本地 clone 用仓库脚本安装：
+
+```bash
+git clone https://github.com/n0ctx/skills.git ~/Projects/skills
+~/Projects/skills/scripts/link.sh --skill guard-ratchet --agent all
+```
+
+完整参数、更新与卸载见[仓库中文 README](../../README.zh-CN.md)。
 
 不支持 skill 的 agent：让它先读 `SKILL.md` 再按流程做即可，文件里没有依赖特定工具名的指令。
 
@@ -103,5 +109,3 @@ MIT，见 [LICENSE](LICENSE)。
 ```
 /plugin install guard-ratchet --marketplace n0ctx/skills
 ```
-
-或用 skills CLI：`npx skills add n0ctx/skills --skill guard-ratchet -g`

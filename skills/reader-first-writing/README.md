@@ -12,13 +12,20 @@ The paper analyzed English only. The guidance for other languages follows from t
 
 ## Install
 
+Install just this skill, globally:
+
+```bash
+npx skills add n0ctx/skills --skill reader-first-writing -g
+```
+
+Or link it from a local clone:
+
 ```bash
 git clone https://github.com/n0ctx/skills.git ~/Projects/skills
-ln -s ~/Projects/skills/skills/reader-first-writing ~/.agents/skills/reader-first-writing
-
-# Claude Code reads ~/.claude/skills/
-ln -s ~/.agents/skills/reader-first-writing ~/.claude/skills/reader-first-writing
+~/Projects/skills/scripts/link.sh --skill reader-first-writing --agent all
 ```
+
+Full flags, updates and uninstall: [repo README](../../README.md).
 
 Agents without skill support can be told to read `SKILL.md` first and follow it.
 
@@ -27,5 +34,3 @@ Agents without skill support can be told to read `SKILL.md` first and follow it.
 ```
 /plugin install reader-first-writing --marketplace n0ctx/skills
 ```
-
-Or with the skills CLI: `npx skills add n0ctx/skills --skill reader-first-writing -g`

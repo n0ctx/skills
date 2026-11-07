@@ -23,6 +23,16 @@ Interrupted work resumes from the plan, reconciled against the actual Git state.
 
 See [SKILL.md](SKILL.md) for details.
 
+## Install
+
+Install just this skill, globally:
+
+```bash
+npx skills add n0ctx/skills --skill dag-engineering -g
+```
+
+Full flags, updates and uninstall: [repo README](../../README.md).
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
@@ -32,5 +42,3 @@ MIT. See [LICENSE](LICENSE).
 ```
 /plugin install dag-engineering --marketplace n0ctx/skills
 ```
-
-Or with the skills CLI: `npx skills add n0ctx/skills --skill dag-engineering -g`

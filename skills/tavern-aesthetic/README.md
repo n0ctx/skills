@@ -17,13 +17,13 @@ Independent of SillyTavern and any specific frontend framework; the project's ex
 
 ## Install
 
-Clone into your personal skills directory:
+Install just this skill, globally:
 
-```sh
-git clone https://github.com/n0ctx/tavern-aesthetic.git ~/.agents/skills/tavern-aesthetic
+```bash
+npx skills add n0ctx/skills --skill tavern-aesthetic -g
 ```
 
-For Claude Code, install to `~/.claude/skills/tavern-aesthetic`. If the target directory already exists, check its contents first to avoid overwriting an existing install.
+Target a single agent with `-a claude-code`. Full flags, updates and uninstall: [repo README](../../README.md).
 
 ## Usage
 
@@ -57,5 +57,3 @@ Below: a cultivation-genre character card generated with this skill, 720px wide,
 ```
 /plugin install tavern-aesthetic --marketplace n0ctx/skills
 ```
-
-Or with the skills CLI: `npx skills add n0ctx/skills --skill tavern-aesthetic -g`

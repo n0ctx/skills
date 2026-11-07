@@ -34,14 +34,20 @@ Each rule has three levels: **hard rules** (fail immediately, never baselined), 
 
 ## Install
 
-A skill is a directory whose core is `SKILL.md`. Put it where your agent reads skills:
+Install just this skill, globally:
 
 ```bash
-git clone https://github.com/n0ctx/guard-ratchet ~/.agents/skills/guard-ratchet
-
-# Claude Code reads ~/.claude/skills/
-ln -s ~/.agents/skills/guard-ratchet ~/.claude/skills/guard-ratchet
+npx skills add n0ctx/skills --skill guard-ratchet -g
 ```
+
+Or link it from a local clone:
+
+```bash
+git clone https://github.com/n0ctx/skills.git ~/Projects/skills
+~/Projects/skills/scripts/link.sh --skill guard-ratchet --agent all
+```
+
+Full flags, updates and uninstall: [repo README](../../README.md).
 
 For agents without skill support, have them read `SKILL.md` first and follow the process; the file contains no tool-specific instructions.
 
@@ -103,5 +109,3 @@ MIT, see [LICENSE](LICENSE).
 ```
 /plugin install guard-ratchet --marketplace n0ctx/skills
 ```
-
-Or with the skills CLI: `npx skills add n0ctx/skills --skill guard-ratchet -g`

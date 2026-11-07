@@ -8,12 +8,20 @@ The skill is built around a single idea: the reader has only the page. Before wr
 
 ## Install
 
-```bash
-git clone git@github.com:n0ctx/writing-for-agents.git ~/.agents/skills/writing-for-agents
+Install just this skill, globally:
 
-# Claude Code reads ~/.claude/skills/
-ln -s ~/.agents/skills/writing-for-agents ~/.claude/skills/writing-for-agents
+```bash
+npx skills add n0ctx/skills --skill writing-for-agents -g
 ```
+
+Or link it from a local clone:
+
+```bash
+git clone https://github.com/n0ctx/skills.git ~/Projects/skills
+~/Projects/skills/scripts/link.sh --skill writing-for-agents --agent all
+```
+
+Full flags, updates and uninstall: [repo README](../../README.md).
 
 Agents without skill support can be told to read `SKILL.md` first and follow it.
 
@@ -22,5 +30,3 @@ Agents without skill support can be told to read `SKILL.md` first and follow it.
 ```
 /plugin install writing-for-agents --marketplace n0ctx/skills
 ```
-
-Or with the skills CLI: `npx skills add n0ctx/skills --skill writing-for-agents -g`

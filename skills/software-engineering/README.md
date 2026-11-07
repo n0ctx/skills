@@ -1,16 +1,16 @@
 # software-engineering
 
-Agent skill for coding, debugging, configuring, testing and reviewing: local implementation decisions, and guards against recurring coding-agent failures. Structural decisions belong to [software-architecture](https://github.com/n0ctx/software-architecture); the two skills are independent and loading one does not cancel the other.
+Agent skill for coding, debugging, configuring, testing and reviewing: local implementation decisions, and guards against recurring coding-agent failures. Structural decisions belong to [software-architecture](../software-architecture/); the two skills are independent and loading one does not cancel the other.
 
 ## Install
 
-Clone straight into the skills directory your agent reads:
+Install just this skill, globally:
 
-```sh
-git clone https://github.com/n0ctx/software-engineering.git ~/.agents/skills/software-engineering
+```bash
+npx skills add n0ctx/skills --skill software-engineering -g
 ```
 
-`SKILL.md` is at the repository root, so the clone is the skill. `references/` is loaded only when `SKILL.md` says to. `evals/` and `research/` are maintainer material and are not loaded during coding.
+`SKILL.md` lives at `skills/software-engineering/SKILL.md` in the monorepo. `evals/` and `research/` are maintainer material and are not loaded during coding.
 
 A same-named copy in a higher-precedence directory (for example `~/.hermes/skills/`) hides this one. Keep one visible copy. Hermes also needs `skills.external_dirs` to include `~/.agents/skills`.
 
@@ -23,5 +23,3 @@ A same-named copy in a higher-precedence directory (for example `~/.hermes/skill
 ```
 /plugin install software-engineering --marketplace n0ctx/skills
 ```
-
-Or with the skills CLI: `npx skills add n0ctx/skills --skill software-engineering -g`
