@@ -95,3 +95,11 @@ examples/javascript/
 ## 许可证
 
 MIT，见 [LICENSE](LICENSE)。
+
+## Install as a Claude Code plugin
+
+```
+/plugin install guard-ratchet --marketplace n0ctx/skills
+```
+
+Or with the skills CLI: `npx skills add n0ctx/skills --skill guard-ratchet -g`

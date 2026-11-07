@@ -51,3 +51,11 @@ Below: a cultivation-genre character card generated with this skill, 720px wide,
 - [references/asset-sources.md](references/asset-sources.md): asset sources and license checks.
 - [references/research.md](references/research.md): evidence, sources, limitations.
 - [docs/](docs/): example screenshots.
+
+## Install as a Claude Code plugin
+
+```
+/plugin install tavern-aesthetic --marketplace n0ctx/skills
+```
+
+Or with the skills CLI: `npx skills add n0ctx/skills --skill tavern-aesthetic -g`

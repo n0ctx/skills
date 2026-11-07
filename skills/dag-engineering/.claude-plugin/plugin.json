@@ -1,0 +1,8 @@
+{
+  "name": "dag-engineering",
+  "description": "Planning and control for large multi-session engineering work",
+  "version": "1.0.0",
+  "author": { "name": "n0ctx" },
+  "repository": "https://github.com/n0ctx/skills",
+  "skills": "./"
+}

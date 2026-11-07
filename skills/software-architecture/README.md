@@ -17,3 +17,11 @@ A same-named copy in a higher-precedence directory (for example `~/.hermes/skill
 ## Status
 
 No eval plan yet; this release is a candidate, not a measured improvement. Current version: 1.0.0.
+
+## Install as a Claude Code plugin
+
+```
+/plugin install software-architecture --marketplace n0ctx/skills
+```
+
+Or with the skills CLI: `npx skills add n0ctx/skills --skill software-architecture -g`

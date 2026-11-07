@@ -26,3 +26,11 @@ See [SKILL.md](SKILL.md) for details.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Install as a Claude Code plugin
+
+```
+/plugin install dag-engineering --marketplace n0ctx/skills
+```
+
+Or with the skills CLI: `npx skills add n0ctx/skills --skill dag-engineering -g`

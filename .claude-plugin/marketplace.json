@@ -1,0 +1,45 @@
+{
+  "name": "n0ctx-skills",
+  "owner": {
+    "name": "n0ctx",
+    "url": "https://github.com/n0ctx"
+  },
+  "description": "Personal agent skills: architecture, engineering, design, writing, and source guards",
+  "plugins": [
+    {
+      "name": "dag-engineering",
+      "source": "./skills/dag-engineering",
+      "description": "Planning and control for large multi-session engineering work"
+    },
+    {
+      "name": "guard-ratchet",
+      "source": "./skills/guard-ratchet",
+      "description": "Ratchet-style source guards for code quality gates"
+    },
+    {
+      "name": "reader-first-writing",
+      "source": "./skills/reader-first-writing",
+      "description": "Sentence-level readability for human-facing text"
+    },
+    {
+      "name": "software-architecture",
+      "source": "./skills/software-architecture",
+      "description": "Architecture boundaries, trade-offs, migrations, decision records"
+    },
+    {
+      "name": "software-engineering",
+      "source": "./skills/software-engineering",
+      "description": "Coding, debugging, configuration, testing, review"
+    },
+    {
+      "name": "tavern-aesthetic",
+      "source": "./skills/tavern-aesthetic",
+      "description": "Immersive UI design for role-play and narrative pages"
+    },
+    {
+      "name": "writing-for-agents",
+      "source": "./skills/writing-for-agents",
+      "description": "Writing and revising text agents read and execute"
+    }
+  ]
+}

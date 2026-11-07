@@ -18,31 +18,95 @@ Personal collection of agent skills. Each skill is a self-contained directory, w
 
 ## Install
 
+Each skill can be installed on its own, into any agent. Three paths; pick one.
+
+### 1. skills CLI — per skill, per agent
+
 ```bash
-git clone https://github.com/n0ctx/skills.git ~/Projects/skills
-~/Projects/skills/scripts/link.sh           # link into ~/.agents/skills
-~/Projects/skills/scripts/link.sh --dry-run # preview changes only
+npx skills add n0ctx/skills --list
+npx skills add n0ctx/skills --skill guard-ratchet -a claude-code -g
+npx skills add n0ctx/skills --skill tavern-aesthetic -a cursor -g --copy
 ```
 
-`link.sh` symlinks `skills/<name>` into `~/.agents/skills/<name>`. Only directories recognized as skills (containing `SKILL.md`) are linked, and existing real directories are never overwritten.
+| Flag | Meaning |
+|---|---|
+| `-s, --skill <name>` | Install one skill; repeat, comma-separate, or use `*` for all |
+| `-a, --agent <name>` | Target agent, e.g. `claude-code`, `cursor`, `codex`; omit to pick interactively |
+| `-g, --global` | User-level directory instead of the current project |
+| `--copy` | Copy files instead of symlinking |
+| `-l, --list` | Preview available skills without installing |
+
+The CLI discovers `skills/<name>/SKILL.md` automatically. No manifest required.
+
+### 2. Claude Code plugin marketplace
+
+```bash
+/plugin marketplace add n0ctx/skills
+/plugin install guard-ratchet@n0ctx-skills
+```
+
+One step on Claude Code 2.1.275+:
+
+```
+/plugin install guard-ratchet --marketplace n0ctx/skills
+```
+
+The marketplace name comes from `name` in `.claude-plugin/marketplace.json` (`n0ctx-skills`); check `/plugin marketplace list` if your client registers it under a different name. One plugin per skill, each with its own `.claude-plugin/plugin.json`.
+
+### 3. link.sh — self-hosted, symlink-based
+
+```bash
+git clone https://github.com/n0ctx/skills.git ~/Projects/skills
+~/Projects/skills/scripts/link.sh --dry-run
+~/Projects/skills/scripts/link.sh --skill guard-ratchet --agent claude,workbuddy
+~/Projects/skills/scripts/link.sh --agent all
+~/Projects/skills/scripts/link.sh --skill tavern-aesthetic --agent cursor --copy
+```
+
+| Flag | Meaning |
+|---|---|
+| `--skill NAME` | Only these skills; repeatable or comma-separated. Default: all |
+| `--agent NAME` | `agents`, `claude`, `workbuddy`, `codex`, `cursor`, `all`. Repeatable |
+| `--target DIR` | Append a custom target directory |
+| `--copy` | Copy instead of symlink |
+| `--dry-run` | Print changes without touching anything |
+| `--force` | Replace a real directory of the same name (moves it into `.trash`) |
+
+With no flags, all skills are symlinked into `~/.agents/skills`. Missing target directories are created automatically.
 
 ## Update
 
-```bash
-cd ~/Projects/skills && git pull
-```
+| Install path | Update |
+|---|---|
+| link.sh (symlink) | `git pull` — every agent sees changes immediately |
+| link.sh `--copy` | Re-run the same command |
+| skills CLI | `npx skills update` |
+| plugin marketplace | `/plugin marketplace update n0ctx-skills` |
 
-Symlinks point inside the skill directories, so every agent picks up changes after a pull. No reinstall needed.
+## Uninstall
+
+- CLI: `npx skills remove guard-ratchet -g`
+- Marketplace: `/plugin uninstall guard-ratchet@n0ctx-skills`
+- link.sh: `unlink` the symlink inside the agent's skills directory. Never delete the target it points to.
 
 ## Layout
 
 ```
 skills/
 └── <name>/
-    ├── SKILL.md          # Required; YAML frontmatter with name/description
-    ├── references/       # Optional; docs loaded on demand
-    └── scripts/          # Optional; executable scripts
+    ├── SKILL.md                     # Required; YAML frontmatter with name/description
+    ├── .claude-plugin/plugin.json  # Claude Code plugin manifest
+    ├── references/                 # Optional; docs loaded on demand
+    └── scripts/                    # Optional; executable scripts
+.claude-plugin/marketplace.json     # Marketplace catalog, one plugin per skill
+scripts/link.sh                     # Local installer
 ```
+
+## Compatibility notes
+
+- Do not mix install paths in the same agent directory. If another tool already manages symlinks in `~/.claude/skills`, `~/.agents/skills`, or `~/.workbuddy/skills`, installing a skill with the same name will replace its link. Run `--dry-run` first; "reset symlink" / `重设软链` means an existing link points somewhere else.
+- Symlinks are the default for both the CLI and `link.sh`. Use `--copy` when the install must not depend on the clone path.
+- Keep `SKILL.md` at `skills/<name>/SKILL.md`. Moving it deeper (e.g. `plugins/<name>/skills/<name>/SKILL.md`) breaks discovery by `npx skills add`. `plugin.json` uses `"skills": "./"` precisely to avoid that move.
 
 ## License
 

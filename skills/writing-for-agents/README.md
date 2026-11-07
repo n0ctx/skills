@@ -16,3 +16,11 @@ ln -s ~/.agents/skills/writing-for-agents ~/.claude/skills/writing-for-agents
 ```
 
 Agents without skill support can be told to read `SKILL.md` first and follow it.
+
+## Install as a Claude Code plugin
+
+```
+/plugin install writing-for-agents --marketplace n0ctx/skills
+```
+
+Or with the skills CLI: `npx skills add n0ctx/skills --skill writing-for-agents -g`

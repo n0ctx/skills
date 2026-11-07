@@ -21,3 +21,11 @@ ln -s ~/.agents/skills/reader-first-writing ~/.claude/skills/reader-first-writin
 ```
 
 Agents without skill support can be told to read `SKILL.md` first and follow it.
+
+## Install as a Claude Code plugin
+
+```
+/plugin install reader-first-writing --marketplace n0ctx/skills
+```
+
+Or with the skills CLI: `npx skills add n0ctx/skills --skill reader-first-writing -g`

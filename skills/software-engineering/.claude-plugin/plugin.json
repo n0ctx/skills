@@ -1,0 +1,8 @@
+{
+  "name": "software-engineering",
+  "description": "Coding, debugging, configuration, testing, review",
+  "version": "1.2.1",
+  "author": { "name": "n0ctx" },
+  "repository": "https://github.com/n0ctx/skills",
+  "skills": "./"
+}

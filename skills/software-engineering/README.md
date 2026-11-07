@@ -17,3 +17,11 @@ A same-named copy in a higher-precedence directory (for example `~/.hermes/skill
 ## Status
 
 `evals/software-engineering.md` is the check plan; `research/software-engineering-v1.2.md` explains why the current rules exist. Neither has been run as a live A/B test, so this release is a candidate, not a measured improvement. Current version: 1.2.1.
+
+## Install as a Claude Code plugin
+
+```
+/plugin install software-engineering --marketplace n0ctx/skills
+```
+
+Or with the skills CLI: `npx skills add n0ctx/skills --skill software-engineering -g`
