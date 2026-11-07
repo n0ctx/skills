@@ -10,7 +10,7 @@ metadata:
 
 # Reader-First Writing
 
-You are writing for a human reader. The reader has none of your context and holds each sentence in working memory while reading it. Every time a sentence makes them look back for its subject, unpack a string of nouns, or supply a connective you left out, it gets harder to understand. LLM prose has a few habitual tendencies that land exactly there: inanimate things performing human actions, long gaps between subject and verb, dropped optional words, stacked nouns, and coined verbs and phrases. None of these loses information; they move the decoding work onto the reader. (Basis: Clark, Martin & Mahowald, *Why is AI-generated language so hard to understand?*, arXiv:2610.29162.) Correct these tendencies as you draft and as you revise.
+You are writing for a human reader. The reader has none of your context and holds each sentence in working memory while reading it. Every time a sentence makes them look back for its subject, unpack a string of nouns, or supply a connective you left out, it gets harder to understand. LLM prose has a few habitual tendencies that land exactly there: inanimate things performing human actions, long gaps between subject and verb, dropped optional words, stacked nouns, and coined verbs and phrases. None of these loses information; they move the decoding work onto the reader. Correct these tendencies as you draft and as you revise.
 
 This is not an "AI humanizer". Those tools change surface wording to get past detectors; this skill cares only whether the reader understands. Adding deliberate irregularities or filler words to sound more human is not the goal.
 
@@ -63,7 +63,3 @@ Go through the text paragraph by paragraph. For every "yes" below, apply the und
 - Is there a noun used as a verb, a jargon verb, or a coined phrase the reader has not seen?
 - Is what the reader most needs to know near the front?
 - Is there parallelism, antithesis, or a string of modifiers that adds no information?
-
-## Limitations
-
-The paper analyzed English only. The guidance for other languages follows from the same reasoning (working memory is limited, and shorter dependencies are easier to process) but has not been systematically tested. If a principle does not help in practice, revise that principle. Sentence-level edits do not fix structure: in long documents, readability depends mostly on what you keep and in what order.

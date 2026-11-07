@@ -6,6 +6,10 @@ It is based on Clark, Martin & Mahowald, *Why is AI-generated language so hard t
 
 It is not an AI-detection evader. It does not add filler or deliberate irregularities; it only aims at text people can read without rereading.
 
+## Limitations
+
+The paper analyzed English only. The guidance for other languages follows from the same reasoning (limited working memory, shorter dependencies are easier to process) but has not been systematically tested; if a principle does not help in practice, revise it. The skill works at the sentence level and does not fix document structure.
+
 ## Install
 
 ```bash
