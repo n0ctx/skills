@@ -10,11 +10,11 @@ Personal collection of agent skills. Each skill is a self-contained directory, w
 |---|---|
 | dag-engineering | Planning and control for large multi-session engineering work |
 | guard-ratchet | Ratchet-style source guards: complexity, dead code, duplication, N+1, cycles, test shape |
+| reader-first-writing | Sentence-level readability for any text humans read, in any genre or language |
 | software-architecture | Architecture work: boundaries, trade-offs, migrations, decision records |
 | software-engineering | Coding, debugging, configuration, testing, review |
 | tavern-aesthetic | Immersive UI design for role-play, interactive fiction, and narrative pages |
 | writing-for-agents | Writing and revising text agents read and execute: prompts, SKILL.md, AGENTS.md, handoffs |
-| mac-proxy-env | Living map of proxy, Clash, Headroom, agent routing, and SSH/Tailscale across Mac machines |
 
 ## Install
 

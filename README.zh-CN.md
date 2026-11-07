@@ -10,11 +10,11 @@
 |---|---|
 | dag-engineering | 大规模多会话工程的规划与控制 |
 | guard-ratchet | 落地棘轮式源码守卫（复杂度、死代码、重复、N+1、循环依赖、测试形状） |
+| reader-first-writing | 任何给人读的文字的句子级可读性，不分文体和语言 |
 | software-architecture | 软件架构任务（边界、权衡、迁移、架构决策） |
 | software-engineering | 编码、调试、配置、测试、评审 |
 | tavern-aesthetic | 角色扮演 / 互动小说 / 叙事型网页的沉浸式界面设计 |
 | writing-for-agents | 撰写与改进 agent 要阅读执行的文本（prompt、SKILL.md、AGENTS.md、handoff） |
-| mac-proxy-env | 双 Mac 代理/Clash/Headroom/Agent 路由/SSH/Tailscale 的活地图，改网络前必读 |
 
 ## 安装
 
