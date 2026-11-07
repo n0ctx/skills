@@ -1,6 +1,8 @@
 # Skills
 
-[中文](README.zh-CN.md)
+[Simplified Chinese](README.zh-CN.md)
+
+English is the default for READMEs in this repo; Simplified Chinese versions live in `README.zh-CN.md` next to the English file.
 
 Personal collection of agent skills. Each skill is a self-contained directory, with `SKILL.md` as its entry point.
 
@@ -104,7 +106,7 @@ scripts/link.sh                     # Local installer
 
 ## Compatibility notes
 
-- Do not mix install paths in the same agent directory. If another tool already manages symlinks in `~/.claude/skills`, `~/.agents/skills`, or `~/.workbuddy/skills`, installing a skill with the same name will replace its link. Run `--dry-run` first; "reset symlink" / `重设软链` means an existing link points somewhere else.
+- Do not mix install paths in the same agent directory. If another tool already manages symlinks in `~/.claude/skills`, `~/.agents/skills`, or `~/.workbuddy/skills`, installing a skill with the same name will replace its link. Run `--dry-run` first; a "reset symlink" line means an existing link points somewhere else.
 - Symlinks are the default for both the CLI and `link.sh`. Use `--copy` when the install must not depend on the clone path.
 - Keep `SKILL.md` at `skills/<name>/SKILL.md`. Moving it deeper (e.g. `plugins/<name>/skills/<name>/SKILL.md`) breaks discovery by `npx skills add`. `plugin.json` uses `"skills": "./"` precisely to avoid that move.
 

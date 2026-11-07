@@ -2,6 +2,8 @@
 
 [English](README.md)
 
+本仓库 README 默认使用英文；简体中文版放在同目录的 `README.zh-CN.md`。
+
 个人 Agent Skill 集合。每个技能是一个独立目录，`SKILL.md` 为该技能入口。
 
 ## 技能索引
