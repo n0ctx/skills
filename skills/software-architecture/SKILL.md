@@ -1,7 +1,7 @@
 ---
 name: software-architecture
 description: Use for software architecture related tasks, not routine coding.
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     category: development
@@ -23,7 +23,7 @@ An architecture question may end with a recommendation not to restructure.
 
 1. **Start from architectural drivers, not patterns.** Identify the few functional flows, constraints, and quality attributes that can change this decision (reliability, changeability, latency, security, cost, team capacity). When drivers conflict, rank them. State a consequential quality claim as a scenario: under what condition, what must happen, and what counts as success. If a number or requirement is not in the drivers or the repository, label it an assumption. Do not turn it into a requirement.
 
-2. **Ground the current system.** In an existing codebase, inspect the relevant entry points, runtime and data flows, owners, real dependencies, deployment shape, and previous decisions before prescribing structure. Separate verified structure from documents, intended structure, and guesses. An old diagram is not proof. In greenfield work, identify the smallest deployable structure that meets the known drivers before adding optional surfaces.
+2. **Ground the current system.** In an existing codebase, inspect the relevant entry points, runtime and data flows, owners, real dependencies, deployment shape, and previous decisions before prescribing structure. Separate verified structure from documents, intended structure, and guesses. An old diagram is not proof. Code that grew through many generated changes may reflect accretion rather than any decision: do not infer intent from its current shape, and treat parallel implementations of one responsibility as evidence of a missing owner rather than a design to preserve. In greenfield work, identify the smallest deployable structure that meets the known drivers before adding optional surfaces.
 
 3. **Draw boundaries around ownership and change.** For each proposed component or service, name its responsibility, authoritative state owner, inbound and outbound contracts, and allowed dependencies. Trace one important end-to-end flow and its failure path across those boundaries. Split by a coherent business or operational responsibility, not by folder size, pattern fashion, or imagined reuse. Keep related changes together unless a ranked driver requires separation.
 
@@ -33,7 +33,7 @@ An architecture question may end with a recommendation not to restructure.
 
 6. **Treat evolution as a design constraint.** When changing a live system, account for compatibility, sequencing, cutover, data ownership during transition, rollback limits, and retirement of the old path. For a split, merge, rewrite, or migration, read [existing-system evolution](references/existing-system-evolution.md). A target structure without a feasible transition is incomplete.
 
-7. **Do not treat a proposal as an accepted decision.** If the task asks for a durable record, write it in the repository's existing decision location, with status proposed unless the decision-maker has accepted it. Add an enforceable check only when existing lint, types, tests, or CI can fail a specific boundary violation. Do not add a policy file or CI job to formalize a diagram. Read [decision records and fitness](references/decision-records-and-fitness.md) only for an ADR, a cross-session handoff, or an enforceable guardrail.
+7. **Do not treat a proposal as an accepted decision.** If the task asks for a durable record, write it in the repository's existing decision location, with status proposed unless the decision-maker has accepted it. Make the record discoverable from where agents and new contributors load project context, for example a one-line pointer in the repository's existing agent instruction file, because a record nobody loads does not stop the next change from undoing the decision. Add an enforceable check only when existing lint, types, tests, or CI can fail a specific boundary violation. Do not add a policy file or CI job to formalize a diagram. Read [decision records and fitness](references/decision-records-and-fitness.md) only for an ADR, a cross-session handoff, or an enforceable guardrail.
 
 ## Conditional depth
 

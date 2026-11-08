@@ -16,7 +16,7 @@ A same-named copy in a higher-precedence directory (for example `~/.hermes/skill
 
 ## Status
 
-`evals/software-engineering.md` is the check plan; `research/software-engineering-v1.2.md` explains why the current rules exist. Neither has been run as a live A/B test, so this release is a candidate, not a measured improvement. Current version: 1.2.1.
+`evals/software-engineering.md` is the check plan; `research/` explains why the current rules exist. Neither has been run as a live A/B test, so this release is a candidate, not a measured improvement. Current version: 1.3.0.
 
 ## Install as a Claude Code plugin
 

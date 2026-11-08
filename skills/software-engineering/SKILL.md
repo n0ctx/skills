@@ -1,7 +1,7 @@
 ---
 name: software-engineering
 description: Use for coding, debugging, configuring, testing, reviewing.
-version: 1.2.1
+version: 1.3.0
 metadata:
   hermes:
     category: development
@@ -15,11 +15,11 @@ Build correct, maintainable behavior in an existing codebase without adding avoi
 
 1. **Find the actual change needed.** Check the full requested outcome against the active code path and effective configuration, not a presumed architecture or the first search hit. If behavior is already correct, demonstrate it and make no unnecessary change; a vanished symptom alone does not prove the entire requirement is met.
 
-2. **Define the behavioral slice.** For a nontrivial change, identify the input, decision/state owner, side effects, observable output, affected callers, and important failure cases. Select the smallest *coherent end-to-end* change that satisfies them. Do not begin with scaffolding, speculative extension points, or a broad rewrite. If the needed change alters an agreed architectural boundary, raise the decision through SOUL first.
+2. **Define the behavioral slice.** For a nontrivial change, identify the input, decision/state owner, side effects, observable output, affected callers, and important failure cases. Include every site that must change in step, such as parallel handlers, registrations, serializers, or mirrored validation; incomplete edits concentrate where correctness depends on code outside the current file. Select the smallest *coherent end-to-end* change that satisfies them. Do not begin with scaffolding, speculative extension points, or a broad rewrite. If the needed change alters an agreed architectural boundary, raise the decision through SOUL first.
 
 3. **Design the local contract before growing code.** Use the existing owner, integration seam, and dependency direction. When introducing an interface or stateful component, decide who owns state, which invariants it maintains, and how errors cross the boundary. Prefer a working, testable slice before generalizing, unless a real dependency requires a foundation first. Do not create a second implementation, competing state store, arbitrary retry, or compatibility shim to mask a defect.
 
-4. **Fit the evolving codebase.** Reuse established domain terms, naming, error semantics, module responsibilities, and public interfaces instead of introducing a model-specific style. Keep related behavior cohesive; split only along real responsibilities, not file/function length quotas. Avoid new coupling, cycles, duplication, and indirection without a concrete payoff. On paths with materially growing inputs, assess algorithmic scaling and measure when consequential. Keep non-obvious durable invariants discoverable in the project's existing authoritative location.
+4. **Fit the evolving codebase.** Reuse established domain terms, naming, error semantics, module responsibilities, and public interfaces instead of introducing a model-specific style. Before adding a helper, search for an existing one. Keep related behavior cohesive; split only along real responsibilities, not file/function length quotas. When a change would add another branch, flag, or near-copy to a unit that already handles several cases, restructure that unit as part of the change instead of appending, including code an earlier agent wrote: repeated appending erodes structure while every version still passes. This covers touched units only, not a broad rewrite. Avoid new coupling, cycles, duplication, and indirection without a concrete payoff. On paths with materially growing inputs, assess algorithmic scaling and measure when consequential. Keep non-obvious durable invariants, and the reason and rejected alternative behind a non-obvious design choice, discoverable in the project's existing authoritative location; intent cannot be recovered from code alone.
 
 ## Guard the change
 
@@ -33,7 +33,7 @@ Build correct, maintainable behavior in an existing codebase without adding avoi
 
 9. **Verify the outcome at its real boundary.** Use evidence able to disprove the claim: actual runtime behavior, effective configuration, the original reproducer, an integration boundary, or old/new data behavior as applicable. A successful edit, build, lint, mock, or self-authored test proves only what it exercises. Recheck relevant behavior after the last edit; report unverified claims as unverified.
 
-10. **Inspect the delivered diff.** Review changed and new files for missed integration, accidental scope expansion, duplicate paths, contract regressions, and temporary artifacts. Keep legitimate tests and durable documentation. Recheck current files and test state after long handoffs or context compaction; summaries are not proof.
+10. **Inspect the delivered diff.** Compare changed and new files against their pre-change state for missed integration, accidental scope expansion, duplicate paths, contract regressions, temporary artifacts, and touched units that gained branches or copies without a restructure. Delete the superseded implementation and the helpers or flags it orphans in the same change, so later readers need not understand two versions. Keep legitimate tests and durable documentation. Recheck current files and test state after long handoffs or context compaction; summaries are not proof.
 
 ## Depth without ceremony
 

@@ -16,7 +16,7 @@ A same-named copy in a higher-precedence directory (for example `~/.hermes/skill
 
 ## Status
 
-No eval plan yet; this release is a candidate, not a measured improvement. Current version: 1.0.0.
+No eval plan yet; this release is a candidate, not a measured improvement. Current version: 1.1.0.
 
 ## Install as a Claude Code plugin
 
