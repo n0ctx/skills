@@ -36,3 +36,14 @@ Directional only: one run per condition, v1.3 against v1.2, same model and brief
 | 5 | 5 | 12 | 0.00 | 0.69 |
 
 Both passed 15/15 hidden checks at step 5 with the same SLOC (74). At step 5 the v1.3 agent split the four-channel if-chain into per-channel handlers and a dispatch table, citing the existing ladder; the v1.2 agent appended a fourth branch and `send_alert` reached CC 12. Erosion here is the share of CC × √length in functions with CC > 10. Duplicate share stayed 0 for both. One trajectory cannot separate the rule's effect from run-to-run variance; repeated paired trajectories are still needed. The rule 2/4/10 wording was tightened (no change in meaning) between steps 2 and 3 of the v1.3 run.
+
+**Historical replay on a large real repository (casim, ~600 Python files, strict types and ratchet guards).** Three real past commits were replayed: each agent got the parent commit in its own worktree and the original request, and had to pass the project's full `make check`. Requests: merge `xlsx export` into `doc export` (17b592c), add `company get --local` plus homophone candidates (cca9e1f), sheet-aware outline and `--sheet` for multi-sheet workbooks (f7c6b8a). All six runs passed `make check`, so the comparison used a blind reviewer per task who saw two diffs labelled A/B and the base commit, and judged six criteria.
+
+| Task | Overall (blind) | "Structure left for the next change" | Why v1.3 lost, if it did |
+|---|---|---|---|
+| merge export commands | v1.3 (medium) | v1.3 | — |
+| `company get --local` | v1.2 (medium) | v1.3 | reviewer penalized a new third-party dependency; the owner considers that acceptable |
+| multi-sheet workbook, run 1 | v1.2 (medium-high) | v1.3 | v1.3 skipped the SCHEMA documents the project requires to change with the code |
+| multi-sheet workbook, run 2 (after rule 2 named contract documents) | v1.2 (slight, medium) | v1.3 | v1.2 made the JSON keep-guarantee mechanical; v1.3 relied on list size |
+
+v1.3 won the structure criterion in all four comparisons, which is the behavior the new rules target. Its losses came from places the rules did not cover; the first (contract documents as in-step sites) led to the rule 2 wording now in this version and was fixed on rerun. Mechanical metrics (files touched, lines, cyclomatic growth in touched files, guard baselines, guard-allow markers) were close in every pair; casim's own ratchet guards bound both versions, consistent with the view that durable enforcement belongs in CI. Token cost was within ±10% per pair. One run per condition per task: directional, not a measured improvement.
