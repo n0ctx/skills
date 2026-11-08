@@ -40,6 +40,16 @@ Hold SOUL, model, thinking level, tools, system constraints, repository snapshot
 | P11 | New case added to an if/elif ladder with copied blocks, written by an earlier agent | Touched unit restructured (shared step extracted) instead of a further copy; behavior of existing cases unchanged |
 | P12 | New field must reach model, serializer, storage, and display | Every in-step site updated; old records without the field still load |
 
+## Historical replay on a real repository (main maintainability test)
+
+Small fixtures do not separate versions: on a first small change every current model already restructures and updates all sites. Use a large repository with real history instead (the maintainer's casim, ~600 Python files with strict types and ratchet guards, worked well).
+
+- Pick past commits that add or change a feature across several files. For each, create one git worktree per condition at the commit's parent and give the agent the original request in the user's words, not the commit's implementation notes.
+- Give each worktree its own virtual environment. A symlinked shared environment let one run install a package into the main checkout.
+- Forbid business commands and writes to real data; allow the project's own check (`make check`), tests, and `--help` with navigation logging off. Forbid reading later refs or other worktrees, since they contain the reference solution. Ask for the report in the final message, because subagent file writes may be blocked.
+- When both conditions pass the project's checks, compare with one blind reviewer per task: two diffs labelled A/B in random order, the base commit for context, six criteria (correctness, project fit, structure left for the next change, scope, discoverable intent, risk), an overall winner and confidence. Keep the key and the reviews with the diffs.
+- Mechanical metrics (files, lines, cyclomatic growth in touched files, baseline edits, suppression markers) are supporting evidence only; a repository with ratchet guards bounds them for every condition.
+
 ## Sequential maintenance (main longevity test)
 
 - Prepare ≥3 small-to-medium codebases with real callers and tests; prepare 4–6 linked feature/fix tasks for each. Reveal each task only at its turn.
