@@ -1,0 +1,12 @@
+{
+  "name": "guard-ratchet-javascript-example",
+  "private": true,
+  "description": "Reference JavaScript guards for the guard-ratchet skill",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "espree": "^11.2.0"
+  }
+}

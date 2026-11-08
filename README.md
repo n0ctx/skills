@@ -102,7 +102,10 @@ skills/
     └── scripts/                    # Optional; executable scripts
 .claude-plugin/marketplace.json     # Marketplace catalog, one plugin per skill
 scripts/link.sh                     # Local installer
+scripts/validate.mjs                # Consistency check, run by CI
 ```
+
+After adding or renaming a skill, run `node scripts/validate.mjs`. It checks that the directory name, the `SKILL.md` frontmatter `name`, `plugin.json`, and the marketplace entry agree.
 
 ## Compatibility notes
 

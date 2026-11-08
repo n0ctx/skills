@@ -2,7 +2,7 @@
 
 [Simplified Chinese](README.zh-CN.md)
 
-Six guards deployed in a real repository (Express backend + React frontend + SQLite), plus a minimal architecture-boundary reference implementation. Parsing uses espree; fixture tests use Node's built-in `node:test`. It does not depend on `scripts/ratchet.py` — ratchet semantics are implemented in `guard-common.mjs`.
+Six guards deployed in a real repository (Express backend + React frontend + SQLite), plus a minimal architecture-boundary reference implementation. Parsing uses espree; fixture tests use Node's built-in `node:test`; run them here with `npm install && npm test`. It does not depend on `scripts/ratchet.py` — ratchet semantics are implemented in `guard-common.mjs`.
 
 When writing custom detectors, use these as a reference for AST traversal, key design, and fixture tests. Do not copy them wholesale. The constants below belong to the original repository; replace each one with the current repository's specifics before deploying:
 

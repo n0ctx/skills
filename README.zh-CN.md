@@ -102,7 +102,10 @@ skills/
     └── scripts/                    # 可选，可执行脚本
 .claude-plugin/marketplace.json     # 市场清单，一个技能一个插件
 scripts/link.sh                     # 本地安装脚本
+scripts/validate.mjs                # 一致性校验，CI 会运行
 ```
+
+新增或重命名技能后运行 `node scripts/validate.mjs`，它会检查目录名、`SKILL.md` frontmatter 的 `name`、`plugin.json` 与市场清单条目是否一致。
 
 ## 兼容性说明
 

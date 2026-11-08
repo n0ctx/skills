@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-六个在真实仓库（Express 后端 + React 前端 + SQLite）落地过的守卫，加一个最小架构边界参考实现。用 espree 解析，用 Node 内建的 `node:test` 写夹具测试。不依赖 `scripts/ratchet.py`，棘轮语义在 `guard-common.mjs` 里实现。
+六个在真实仓库（Express 后端 + React 前端 + SQLite）落地过的守卫，加一个最小架构边界参考实现。用 espree 解析，用 Node 内建的 `node:test` 写夹具测试，在本目录执行 `npm install && npm test` 运行。不依赖 `scripts/ratchet.py`，棘轮语义在 `guard-common.mjs` 里实现。
 
 写自研检测器时，用它们参照 AST 遍历、key 设计和夹具测试写法，不要整套照搬。下面这些常量属于原仓库，落地前逐个换成当前仓库的实际情况：
 
