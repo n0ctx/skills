@@ -1,7 +1,7 @@
 ---
 name: software-architecture
-description: Use when deciding system structure: new subsystems, module boundaries, dependency direction, migrations, or comparing structural options, even in discussion with no code. Not for changes that fit current boundaries.
-version: 1.1.1
+description: "Use when deciding system structure: new subsystems, module boundaries, dependency direction, migrations, or comparing structural options, even in discussion with no code. Not for changes that fit current boundaries."
+version: 1.1.2
 metadata:
   hermes:
     category: development

@@ -19,9 +19,21 @@ function readJson(file) {
   }
 }
 
+// An unquoted one-line value that strict YAML parsers reject or cut short:
+// `: ` reads as a nested mapping, ` #` starts a comment, and a leading
+// indicator character changes the value's type. Lenient readers (Claude Code)
+// still show such a value, so the break only appears in other tools.
+function plainScalarProblem(value) {
+  if (!value || /^(>-?|\|-?)$/.test(value) || /^(["']).*\1$/.test(value)) return null;
+  if (/:(\s|$)/.test(value)) return 'contains ": "';
+  if (/\s#/.test(value)) return 'contains " #"';
+  if (/^[-?:,\[\]{}#&*!|>'"%@`]/.test(value)) return `starts with "${value[0]}"`;
+  return null;
+}
+
 // Top-level keys of the leading --- block. A key with an empty inline value
 // (e.g. `description: >-`) takes its indented continuation lines.
-function frontmatter(text) {
+function frontmatter(text, where) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/.exec(text);
   if (!match) return null;
   const fields = {};
@@ -30,6 +42,8 @@ function frontmatter(text) {
     const key = /^([A-Za-z_][\w-]*):\s*(.*)$/.exec(line);
     if (key) {
       current = key[1];
+      const problem = plainScalarProblem(key[2].trim());
+      if (problem) fail(where, `${current} ${problem}; quote the value or use a >- block so strict YAML parsers can read it`);
       fields[current] = key[2].replace(/^(>-?|\|-?)$/, '').replace(/^"(.*)"$/, '$1').trim();
     } else if (current && /^\s+\S/.test(line) && !fields[current]?.length) {
       fields[current] = line.trim();
@@ -54,7 +68,7 @@ for (const name of names) {
     fail(where, 'missing SKILL.md');
     continue;
   }
-  const fm = frontmatter(readFileSync(skillFile, 'utf8'));
+  const fm = frontmatter(readFileSync(skillFile, 'utf8'), `${where}/SKILL.md`);
   if (!fm) {
     fail(`${where}/SKILL.md`, 'missing --- frontmatter block');
     continue;
