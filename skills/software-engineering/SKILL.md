@@ -1,7 +1,7 @@
 ---
 name: software-engineering
-description: Use for coding, debugging, configuring, testing, reviewing.
-version: 1.3.0
+description: Use when writing, changing, debugging, testing, or reviewing code. Not for discussion-only analysis.
+version: 1.3.1
 metadata:
   hermes:
     category: development
