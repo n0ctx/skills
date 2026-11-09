@@ -1,6 +1,6 @@
 ---
 name: software-architecture
-description: "Use for all software structure tasks and discussions, including design, review, and structural changes."
+description: "MUST use for all software structure tasks and discussions, including design, review, and structural changes."
 version: 1.1.3
 metadata:
   hermes:

@@ -1,6 +1,6 @@
 ---
 name: writing-for-agents
-description: Use for all writing and messaging for AI agents, including discussions.
+description: MUST use for all writing and messaging for AI agents, including discussions.
 ---
 
 # Writing for agents
