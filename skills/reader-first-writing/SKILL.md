@@ -1,6 +1,6 @@
 ---
 name: reader-first-writing
-description: MUST use for all writing and messaging for human readers, including discussions.
+description: MUST use for all writing and messaging for human readers, including drafting, revising, editing, reviewing, and discussions.
 version: 1.0.0
 metadata:
   hermes:
