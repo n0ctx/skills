@@ -1,7 +1,7 @@
 ---
 name: software-engineering
 description: Use when writing, changing, debugging, testing, or reviewing code. Not for discussion-only analysis.
-version: 1.3.1
+version: 1.3.2
 metadata:
   hermes:
     category: development
@@ -9,13 +9,13 @@ metadata:
 ---
 # Software Engineering
 
-Build correct, maintainable behavior in an existing codebase without adding avoidable complexity. This is an engineering execution standard, not a fixed pipeline or a substitute for architecture design. SOUL owns objectives, approvals, and reporting; project instructions and executable checks own repository-specific conventions.
+Build correct, maintainable behavior in an existing codebase without adding avoidable complexity. This is an engineering execution standard, not a fixed pipeline or a substitute for architecture design. Follow the applicable task instructions, user authorization, and existing architectural decisions; project instructions and executable checks own repository-specific conventions. Do not add approval steps for work the user has already authorized. Escalate only when authorization is insufficient, requirements conflict, or a material decision needs the user's input.
 
 ## Shape the implementation
 
 1. **Find the actual change needed.** Check the full requested outcome against the active code path and effective configuration, not a presumed architecture or the first search hit. If behavior is already correct, demonstrate it and make no unnecessary change; a vanished symptom alone does not prove the entire requirement is met.
 
-2. **Define the behavioral slice.** For a nontrivial change, identify the input, decision/state owner, side effects, observable output, affected callers, and important failure cases. Include every site that must change in step, such as parallel handlers, registrations, serializers, mirrored validation, and any schema or contract document the project requires to change with the code; incomplete edits concentrate where correctness depends on something outside the current file. Select the smallest *coherent end-to-end* change that satisfies them. Do not begin with scaffolding, speculative extension points, or a broad rewrite. If the needed change alters an agreed architectural boundary, raise the decision through SOUL first.
+2. **Define the behavioral slice.** For a nontrivial change, identify the input, decision/state owner, side effects, observable output, affected callers, and important failure cases. Include every site that must change in step, such as parallel handlers, registrations, serializers, mirrored validation, and any schema or contract document the project requires to change with the code; incomplete edits concentrate where correctness depends on something outside the current file. Select the smallest *coherent end-to-end* change that satisfies them. Do not begin with scaffolding, speculative extension points, or a broad rewrite. When the task requires a structural decision, such as introducing a subsystem, changing responsibility or authoritative state ownership, revising module or service boundaries or dependency direction, or planning a structural migration, load `software-architecture` before committing to the design, unless it is already active; both skills then apply. Reassess when inspection or implementation reveals a structural decision the request did not show. Skip it when the change fits existing boundaries.
 
 3. **Design the local contract before growing code.** Use the existing owner, integration seam, and dependency direction. When introducing an interface or stateful component, decide who owns state, which invariants it maintains, and how errors cross the boundary. Prefer a working, testable slice before generalizing, unless a real dependency requires a foundation first. Do not create a second implementation, competing state store, arbitrary retry, or compatibility shim to mask a defect.
 

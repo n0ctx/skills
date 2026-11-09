@@ -10,7 +10,7 @@
 - **C-minus-method:** v1.2 with the new positive implementation guidance in rules 2–4 removed, preserving equivalent safety guards where they overlap.
 - **C-inlined:** v1.2 with both references appended to the main Skill (same wording), to test whether progressive disclosure actually helps.
 
-Hold SOUL, model, thinking level, tools, system constraints, repository snapshot, hidden acceptance criteria, and budget fixed. Use fresh sessions and isolated repositories; randomize condition order. Try repeated paired runs if resources permit. Independent checks must not come from the code-generating agent.
+Hold harness and system instructions, model, thinking level, tools, system constraints, repository snapshot, hidden acceptance criteria, and budget fixed. Use fresh sessions and isolated repositories; randomize condition order. Try repeated paired runs if resources permit. Independent checks must not come from the code-generating agent.
 
 ## Cases and hidden observations
 

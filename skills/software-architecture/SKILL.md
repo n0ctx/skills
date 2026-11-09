@@ -1,7 +1,7 @@
 ---
 name: software-architecture
-description: "Use when deciding system structure: new subsystems, module boundaries, dependency direction, migrations, or comparing structural options, even in discussion with no code. Not for changes that fit current boundaries."
-version: 1.1.2
+description: "Use when designing or changing system structure, including implementation tasks involving new subsystems, responsibility or state ownership, module boundaries, dependency direction, structural refactoring, or migrations. Also use for architecture-only discussion, review, and trade-off analysis. Not for changes confined to existing boundaries."
+version: 1.1.3
 metadata:
   hermes:
     category: development
@@ -9,11 +9,11 @@ metadata:
 ---
 # Software Architecture
 
-Decide system structure and trade-offs. `software-engineering` applies independently when code is written or changed. Loading either skill does not cancel the other. A design or review request does not authorize code edits.
+Decide system structure and trade-offs. When the task includes writing, modifying, or refactoring code, also load `software-engineering`, unless it is already active. If both structural decisions and code changes are apparent from the request, apply both skills from the outset rather than finishing the design first. Loading either skill does not replace the other. A design-only or review-only request does not authorize code changes.
 
 ## When to use
 
-Use for a new subsystem, a change to state ownership or dependency direction, restructuring a live system, a comparison of structural options, or an architecture recommendation that does not require code.
+Use for a new subsystem, a change to responsibility, state ownership, or dependency direction, restructuring a live system (including implementing the restructuring), a comparison of structural options, or an architecture recommendation that does not require code.
 
 Do not use for a clear local bug, a configuration or CLI change, or a feature that fits the current module boundaries.
 

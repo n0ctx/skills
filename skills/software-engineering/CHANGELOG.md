@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2 — 2026-11-09
+- Removed the assumption that SOUL owns objectives, approvals, and reporting; the skill now defers to task instructions, user authorization, and existing architectural decisions in any harness, and escalates only when authorization is insufficient, requirements conflict, or a material decision needs the user.
+- Rule 2: load `software-architecture` when the task requires a structural decision, including one found during implementation; skip it when the change fits existing boundaries. Replaces "raise the decision through SOUL".
+- `high-risk-boundaries.md` and the eval plan no longer name SOUL.
+
 ## 1.3.0 — 2026-11-08
 - Rule 2: list the sites that must change in step (parallel handlers, registrations, serializers, mirrored validation, and schema or contract documents the project requires to move with the code).
 - Rule 4: search for an existing helper before adding one; restructure a touched unit instead of appending another branch or near-copy, including code an agent wrote earlier; keep the rationale and rejected alternative for non-obvious choices in the project's authoritative location.
