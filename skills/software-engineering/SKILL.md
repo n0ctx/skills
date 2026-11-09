@@ -1,6 +1,6 @@
 ---
 name: software-engineering
-description: Use for all software coding tasks.
+description: Use for all software coding tasks, including understanding, writing, modifying, refactoring, debugging, testing, reviewing, and maintaining code.
 version: 1.3.2
 metadata:
   hermes:
