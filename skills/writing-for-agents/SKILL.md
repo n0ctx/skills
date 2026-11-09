@@ -1,19 +1,13 @@
 ---
 name: writing-for-agents
-description: >-
-  Writes or improves prompts and other text an AI agent will read and act on:
-  system prompts, subagent delegation briefs, SKILL.md files, MCP or tool
-  descriptions, handoff documents, GitHub issues and plan files for coding
-  agents, AGENTS.md or CLAUDE.md rules. Use when asked to write a prompt,
-  optimize or rewrite an existing prompt, turn a rough idea into instructions
-  for an agent, or before drafting a substantial brief for another agent. Not
-  for testing, A/B comparison, or eval loops, and not for text only humans
-  will read.
+description: Use for all writing and messaging for AI agents, including discussions.
 ---
 
 # Writing for agents
 
 The reader of anything you write with this skill is an agent that has only the text. It did not see the conversation, cannot ask what you meant, and will act on what the words say, literally and with full effort. Most failures come from the gap between what you know and what made it onto the page. So work from the reader's position: before writing, settle where the work ends, what situation the reader is in, and what material it needs; then write it in words the reader can use without you.
+
+Apply this skill to discussion and review as well as drafting and revision; discussion or review alone does not authorize rewriting. Messaging means composing or discussing message content, not merely sending or retrieving messages. When text is intended to guide an agent and also be read by humans, `reader-first-writing` can apply alongside this skill.
 
 ## Two kinds of input
 

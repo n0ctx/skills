@@ -1,6 +1,6 @@
 ---
 name: software-architecture
-description: "Use when designing or changing system structure, including implementation tasks involving new subsystems, responsibility or state ownership, module boundaries, dependency direction, structural refactoring, or migrations. Also use for architecture-only discussion, review, and trade-off analysis. Not for changes confined to existing boundaries."
+description: "Use for all software structure tasks and discussions, including design, review, and structural changes."
 version: 1.1.3
 metadata:
   hermes:
@@ -15,7 +15,7 @@ Decide system structure and trade-offs. When the task includes writing, modifyin
 
 Use for a new subsystem, a change to responsibility, state ownership, or dependency direction, restructuring a live system (including implementing the restructuring), a comparison of structural options, or an architecture recommendation that does not require code.
 
-Do not use for a clear local bug, a configuration or CLI change, or a feature that fits the current module boundaries.
+A local bug, configuration or CLI change, or feature that fits current module boundaries does not by itself require structural analysis. Use this skill when the task also involves software structure, including assessing whether existing boundaries should remain.
 
 An architecture question may end with a recommendation not to restructure.
 

@@ -1,6 +1,6 @@
 ---
 name: reader-first-writing
-description: Use when writing or revising any text a human will read (articles, emails, notices, explanations, reports, marketing copy, social posts, chat replies) or when reviewing such text. Covers sentence-level readability in any language; not layout, and not "humanizing" text to get past AI detectors.
+description: Use for all writing and messaging for human readers, including discussions.
 version: 1.0.0
 metadata:
   hermes:
@@ -16,7 +16,7 @@ This is not an "AI humanizer". Those tools change surface wording to get past de
 
 ## Scope
 
-Any text meant for human readers, in any genre or language, including reviews of text written by other people or other models. Not for code, prompts written for AI, or rewriting purely to pass AI detection. A style guide the user or project already has takes precedence; this skill covers only sentence-level readability.
+Any text meant for human readers, in any genre or language, including discussions and reviews. Messaging means composing or discussing message content, not merely sending or retrieving messages. Discussion or review alone does not authorize rewriting. For text intended both to guide an AI agent and to be read by humans, apply this skill alongside `writing-for-agents`; not for code or prompts intended only for AI. Do not rewrite purely to pass AI detection. A style guide the user or project already has takes precedence; this skill covers only sentence-level readability.
 
 ## The underlying test
 
