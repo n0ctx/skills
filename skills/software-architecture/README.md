@@ -1,6 +1,6 @@
 # software-architecture
 
-Agent skill for structural decisions and trade-offs: boundaries, distributed state and failure, evolving existing systems, decision records. Not for routine coding; that stays with [software-engineering](../software-engineering/). The two skills are independent and loading one does not cancel the other.
+Agent skill for structural decisions and trade-offs: boundaries, distributed state and failure, evolving existing systems, decision records. Not for routine coding; that stays with [software-engineering](../software-engineering/). When an architectural task also writes or refactors code, this skill loads software-engineering and both apply from the start. The two skills are independent and loading one does not replace the other.
 
 ## Install
 
@@ -16,7 +16,7 @@ A same-named copy in a higher-precedence directory (for example `~/.hermes/skill
 
 ## Status
 
-No eval plan yet; this release is a candidate, not a measured improvement. Current version: 1.1.0.
+No eval plan yet; this release is a candidate, not a measured improvement. Current version: 1.1.3.
 
 ## Install as a Claude Code plugin
 

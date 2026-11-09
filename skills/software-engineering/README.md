@@ -1,6 +1,6 @@
 # software-engineering
 
-Agent skill for coding, debugging, configuring, testing and reviewing: local implementation decisions, and guards against recurring coding-agent failures. Structural decisions belong to [software-architecture](../software-architecture/); the two skills are independent and loading one does not cancel the other.
+Agent skill for coding, debugging, configuring, testing and reviewing: local implementation decisions, and guards against recurring coding-agent failures. Structural decisions belong to [software-architecture](../software-architecture/): when a task needs one, including one discovered mid-implementation, this skill loads it and both apply. The two skills are independent and loading one does not replace the other.
 
 ## Install
 
@@ -16,7 +16,7 @@ A same-named copy in a higher-precedence directory (for example `~/.hermes/skill
 
 ## Status
 
-`evals/software-engineering.md` is the check plan; `research/` explains why the current rules exist. Only directional pilots have been run (results in `research/`); this release is a candidate, not a measured improvement. Current version: 1.3.0.
+`evals/software-engineering.md` is the check plan; `research/` explains why the current rules exist. Only directional pilots have been run (results in `research/`); this release is a candidate, not a measured improvement. Current version: 1.3.2.
 
 ## Install as a Claude Code plugin
 
