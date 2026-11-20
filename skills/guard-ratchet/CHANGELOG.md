@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.0
+
+- **Local merge gate** for repositories without CI: `guard.py gate <branch> --merge` merges the branch into the target's tip in a scratch worktree, runs that merge commit's own check and then the target's runner in trusted mode (each in a fresh worktree), and fast-forwards the target to exactly the judged merge only if both pass. After each step it verifies the worktree, the step's report against its exit code, and the extracted runner's bytes. Guard-configuration and hook changes need `--approve-guard-changes`, hooks never run, and the gate refuses to run from a runner that differs from the target's committed one.
+- The runner no longer runs repository hooks in its own git commands, and looks in its own directory last when importing, so a stray module next to it cannot shadow the standard library.
+
 ## 2.0.0
 
 The skill now installs a runner that owns every baseline and protects its own configuration, instead of a comparison script that each detector piped into.

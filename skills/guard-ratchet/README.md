@@ -61,6 +61,7 @@ python3 tools/guard/guard.py update           # record improvements, renames, ne
 python3 tools/guard/guard.py update --rules-changed
 python3 tools/guard/guard.py except add --guard G --rule R --key K --reason "..." --approved-by NAME
 python3 tools/guard/guard.py risk             # which roles the change touches and why the tier is what it is
+python3 tools/guard/guard.py gate feature --merge   # no CI: judge a branch by its own and main's rules, merge if both pass
 ```
 
 ## Layout

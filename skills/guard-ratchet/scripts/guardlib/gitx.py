@@ -20,11 +20,17 @@ from .model import GuardError
 HUNK_RE = re.compile(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@')
 
 
-def git(root: str, *args: str, check: bool = True, binary: bool = False):
+def run(root: str, *args: str) -> subprocess.CompletedProcess:
     # Pin the settings that change diff output format, so a user's git config cannot blind the parser.
-    proc = subprocess.run(['git', '-c', 'core.quotePath=false', '-c', 'diff.noprefix=false',
-                           '-c', 'diff.mnemonicPrefix=false', '-c', 'diff.relative=false', '-C', root, *args],
+    return subprocess.run(['git', '-c', 'core.quotePath=false', '-c', 'diff.noprefix=false',
+                           '-c', 'diff.mnemonicPrefix=false', '-c', 'diff.relative=false',
+                           # Never run repository hooks: with a tracked hooks path they are the change's own code.
+                           '-c', f'core.hooksPath={os.devnull}', '-C', root, *args],
                           capture_output=True)
+
+
+def git(root: str, *args: str, check: bool = True, binary: bool = False):
+    proc = run(root, *args)
     if check and proc.returncode != 0:
         raise GuardError(f"git {' '.join(args)} failed: {proc.stderr.decode(errors='replace').strip()}")
     if binary:

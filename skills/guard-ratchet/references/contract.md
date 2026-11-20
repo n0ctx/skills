@@ -100,10 +100,11 @@ The risk tier is computed from the change: `fast` when only `risk.fast_roles` (d
 guard.py check  [--base REF|none] [--tier fast|standard|strict] [--full] [--only a,b] [--trusted]
                 [--format text|json|markdown] [--output FILE] [--root DIR]
 guard.py update [--rules-changed] [same selection flags]
+guard.py gate BRANCH [--into TARGET] [--merge] [--approve-guard-changes] [--format text|json] [--root DIR]
 guard.py risk | init [--write] [--force] | except add … | pyapi DIR… | conformance [cases.json]
 ```
 
-Exit codes: `0` pass, `1` blocking problems, `2` usage or configuration error (unknown policy field, unresolvable base, invalid exceptions file, `--only` naming an unknown guard, `--trusted` without `--base`), `3` incomplete: nothing failed, but a required guard's tool is missing or the requested tier is below the required one. Exit 3 is never a pass.
+Exit codes: `0` pass, `1` blocking problems, `2` usage or configuration error (unknown policy field, unresolvable base, invalid exceptions file, `--only` naming an unknown guard, `--trusted` without `--base`), `3` incomplete: nothing failed, but a required guard's tool is missing or the requested tier is below the required one. Exit 3 is never a pass. `gate` returns the worst exit code of its two steps (2, then 1, then 3; any other code, such as a killed step, is 2). A step whose report disagrees with its exit code, whose worktree changed, or whose extracted runner was modified is 2 as well. The gate returns 1 for a guard-configuration or hook change without `--approve-guard-changes`, whether or not `--merge` was given, and 130 when interrupted. Under `--format json` every outcome, errors included, is one `guard-ratchet/gate@1` object: `branch`, `commit`, `target`, `target_commit`, `merge_commit` (the judged trial merge), `exit_code`, `merged`, `guard_changes`, `note`, `issues` (what made a step an error), `error`, and `steps` with each step's `name`, `exit_code` and JSON report.
 
 Command placeholders, in every command including those of built-in guards: `{root}` (scanned tree, which is a temporary base worktree during baseline derivation), `{out}` (report file the tool writes), `{tmp}` (per-run directory shared by guards, e.g. a coverage report written by the tests guard and read by `diff-coverage`), `{base}` (base commit sha). Commands run with the repository root as working directory.
 

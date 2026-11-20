@@ -7,6 +7,7 @@ Commands:
   risk      print the change's roles and verification tier
   init      profile the repository and propose guards/policy.json (--write to create it)
   except    add an exception entry to guards/exceptions.json
+  gate      local merge gate without CI: judge a branch like the CI template does, --merge if it passes
   pyapi     print the public API surface of Python packages (for a snapshot guard)
   conformance  run the ratchet conformance cases
 
@@ -15,17 +16,20 @@ Exit codes: 0 pass, 1 blocking problems, 2 usage/configuration error,
 Python 3.10+, standard library only. See references/contract.md.
 """
 
-from __future__ import annotations
+import sys  # builtin; nothing next to this file can shadow it
 
-import argparse
-import json
-import os
-import sys
-
+# Python puts this file's directory first on sys.path, so a stray json.py or argparse.py next to
+# the runner would run before any check. Look in that directory last: only guardlib lives there.
+HERE = __import__('os').path.dirname(__import__('os').path.abspath(__file__))
+sys.path[:] = [p for p in sys.path if __import__('os').path.abspath(p or '.') != HERE] + [HERE]
 sys.dont_write_bytecode = True  # never leave __pycache__ inside the (protected) runner directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import argparse  # noqa: E402
+import json  # noqa: E402
+import os  # noqa: E402
 
 from guardlib import exceptions as exc
+from guardlib import gate as gatemod
 from guardlib import gitx, pyapi, ratchet, report
 from guardlib import init as initmod
 from guardlib import policy as pol
@@ -183,6 +187,14 @@ def main(argv=None) -> int:
         p.add_argument(f'--{flag}', required=True)
     p.add_argument('--max', type=float)
     p.add_argument('--expires', help='YYYY-MM-DD')
+    p = sub.add_parser('gate', help='judge BRANCH with its own and the target branch\'s rules; --merge if both pass')
+    p.add_argument('branch', help='branch or commit to judge')
+    p.add_argument('--into', help='target branch (default: the checked-out branch)')
+    p.add_argument('--merge', action='store_true', help='fast-forward the target to the judged merge when it passes')
+    p.add_argument('--approve-guard-changes', action='store_true',
+                   help='allow merging a change to the policy, exceptions or protected files (after reviewing it)')
+    p.add_argument('--root')
+    p.add_argument('--format', choices=('text', 'json'), default='text')
     p = sub.add_parser('pyapi')
     p.add_argument('paths', nargs='+')
     p = sub.add_parser('conformance')
@@ -196,11 +208,17 @@ def main(argv=None) -> int:
             return cmd_check(args)
         if args.command == 'update':
             return cmd_check(args, update=True)
+        if args.command == 'gate':
+            return gatemod.gate(_root(args.root), args.branch, args.into, args.merge, args.format,
+                                os.path.dirname(os.path.abspath(__file__)), args.approve_guard_changes)
         return {'risk': cmd_risk, 'init': cmd_init, 'except': cmd_except, 'conformance': cmd_conformance,
                 'pyapi': lambda a: pyapi.main(a.paths)}[args.command](args)
     except GuardError as err:
         print(f'✗ {err}', file=sys.stderr)
         return 2
+    except KeyboardInterrupt:
+        print('✗ interrupted', file=sys.stderr)
+        return 130
 
 
 if __name__ == '__main__':

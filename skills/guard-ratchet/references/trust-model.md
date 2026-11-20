@@ -26,6 +26,21 @@ This needs:
 - **Pinned tools**, installed by the workflow from versions written in the workflow itself or taken from the base branch, not from files the change can edit. Tools installed from the change's own lockfile (`npx eslint`, test runners, lint plugins) can be swapped by the change; the lockfile change itself is reported by the `deps` guard and raises the tier to strict, but a reviewer has to look at it. A tool version that differs from the baseline's is a `rule-change` failure, which is intended.
 - **No `pull_request_target`**. The job executes the change's code (its tests), so it must run with the change's permissions (`pull_request`, `contents: read`, no secrets).
 
+## Without CI: the local merge gate
+
+`guard.py gate <branch> [--into <target>] [--merge]` does on the developer's machine what the CI template does, and judges the result that would actually land:
+
+1. It merges the branch into the target's tip in a scratch worktree. A conflict stops the gate.
+2. It runs that merge commit's own `check` in a fresh worktree.
+3. Only then does it extract the target's runner, blob by blob from the target's tree, and run it as `check --trusted --base <target>` on another fresh worktree of the merge. The change is judged by the policy, baselines, detectors and tool configuration of the target's tip.
+4. With `--merge`, it fast-forwards the checked-out target to exactly that merge commit, provided both checks exit 0 and the target did not move meanwhile.
+
+After each step the gate checks that the worktree is still a clean checkout of the merge, that the step's exit code agrees with the report it wrote, and, after the trusted step, that the extracted runner still holds the target's bytes. Any mismatch, a crash or a killed step is an error, never a pass. Repository hooks never run, in the gate or in any git command the runner issues, because with a tracked hooks path they are the change's own code; that includes your own hooks, such as a `post-merge` that installs dependencies.
+
+The gate refuses to run unless the runner executing it is exactly the target's committed runner, with the same files and the same content as git stores them. Start it from a clean checkout of the target branch. A change to the policy, the exceptions, protected files (runner, detectors, code owners, CI files) or hook files fails the gate (exit 1) unless `--approve-guard-changes` is given, with or without `--merge`. This is the local stand-in for code-owner review: look at the diff the gate prints first, because an exception the branch wrote itself is honored by the trusted step, as in CI. The flag is only as good as the person who passes it; an agent with a shell can pass it too.
+
+Two things stay outside the gate. First, it judges what goes through it: anyone who can run `git merge` directly, including an agent with a shell, can skip it. It fits a workflow where agents work on branches and a person merges. Second, the branch's tests and detectors run as the current user, exactly as in a CI job. Dependency folders (`.venv`, `node_modules`) are linked in from the main checkout, so that code can also write there, and a background process it leaves behind can change files and put them back between the gate's checks. The gate stops a branch from rewriting the rules that judge it, and it notices tampering that leaves traces. It does not contain code that is malicious; judge untrusted branches inside a container or VM. The gate needs a POSIX system (macOS, Linux, WSL).
+
 ## Layer 3: code owners and review
 
 The trusted run still trusts two things the change can touch: the exceptions file, and the workflow file that runs it.
@@ -47,6 +62,7 @@ A change that introduces the guards for the first time has no base policy; `--tr
 | Self-approved exception | visible in diff | honored | reviewed by owners |
 | Workflow edited to skip the guard | flags as `protected` | can be bypassed by the edited workflow | owners review; ruleset-pinned workflow |
 | Agent never runs the check | — | required status check | branch protection |
+| Without CI: branch merged without being judged | `guard.py gate --merge` judges the merge result like the trusted run | — | a person merges through the gate, approving guard changes |
 
 ## Reporting the boundary
 
