@@ -11,7 +11,7 @@
 | 技能 | 用途 |
 |---|---|
 | dag-engineering | 大规模多会话工程的规划与控制 |
-| guard-ratchet | 落地棘轮式源码守卫（复杂度、死代码、重复、N+1、循环依赖、测试形状） |
+| guard-ratchet | 给由 agent 维护的仓库装可执行质量守卫：自适应阈值、测试完整性、安全与供应链、接口与迁移检查、防篡改基线（skill 本身为英文） |
 | reader-first-writing | 任何给人读的文字的句子级可读性，不分文体和语言 |
 | software-architecture | 软件架构任务（边界、权衡、迁移、架构决策） |
 | software-engineering | 编码、调试、配置、测试、评审 |

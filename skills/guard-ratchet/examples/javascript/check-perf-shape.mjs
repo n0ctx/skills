@@ -1,41 +1,44 @@
 #!/usr/bin/env node
 /**
- * 运行形态守卫：只看代码形状，不标注复杂度、不测耗时
+ * Run-shape detector: looks at code shape only; no complexity annotation, no timing.
  *
- * 扫描 frontend/src、backend、assistant/server、assistant/client/src 的正式代码（不含测试）。
- * 循环指 for / for-of / for-in / while / do-while 以及 forEach 回调；逐项查询规则另把
- * map / filter / reduce 等数组遍历回调也算作循环体。
+ * Scans production code (tests excluded) in frontend/src, backend, assistant/server and
+ * assistant/client/src. A loop means for / for-of / for-in / while / do-while and a forEach
+ * callback; the per-item query rule also treats array-iteration callbacks such as
+ * map / filter / reduce as loop bodies.
  *
- * 直接失败（不进基线）：
- *   循环嵌套达到三层，且最内层循环体引用了外层循环变量。两层不报。
+ * hard (writing that should never be accepted):
+ *   deep-loop: loops nested three deep where the innermost loop body references an outer loop
+ *     variable. Two levels are not reported.
  *
- * 记入 scripts/perf-shape-baseline.json，新增算失败、消失算虚挂：
- *   - 循环体内调用 .prepare(，或对 prepare 出来的 Statement 调用 .get( / .all( / .run(，
- *     或调用从 backend/db/queries/ 导入、确实会访问数据库的查询函数
- *     （一次查出再在内存里匹配不在循环里，不会被报；查询目录里不碰数据库的纯函数不算查询）
- *   - 例外：事务里对循环外预编译好的 Statement 逐条 .run( 是 better-sqlite3 推荐的批量写法，不报。
- *     「事务里」指写在 .transaction( 的回调里，或所在函数在本文件里只从事务回调中被调用。
- *   - backend/app、backend/routes、backend/services 里 SELECT 语句既没有 WHERE 也没有 LIMIT
- *     （backend/services/import-export.js 除外）
+ * findings (existing offenders are compared by scripts/guard.py):
+ *   loop-query: inside a loop body, a call to .prepare(, a .get( / .all( / .run( on a prepared
+ *     Statement, or a call to a query function imported from backend/db/queries/ that really
+ *     touches the database (querying once and matching in memory is not in a loop, so it is not
+ *     reported; pure functions in the query directory that never touch the database are not queries).
+ *     Exception: in a transaction, running a Statement prepared outside the loop once per item
+ *     is the batch-write pattern better-sqlite3 recommends and is not reported. "In a transaction"
+ *     means inside a .transaction( callback, or inside a function that, in this file, is only
+ *     called from transaction callbacks.
+ *   unbounded-select: a SELECT with neither WHERE nor LIMIT in backend/app, backend/routes or
+ *     backend/services (except backend/services/import-export.js).
  *
- * 检测器分不清的有意写法（一次性迁移、字段数有固定小上限的逐条写入）用
- * `// guard-allow(perf-shape): 理由` 标在语句旁边，规则见 guard-common.mjs。
+ * Deliberate patterns the detector cannot tell apart (one-off migrations, per-item writes with a
+ * small fixed bound on the field count) carry `// guard-allow(perf-shape): reason` next to the
+ * statement; the rules are in guard-common.mjs.
  *
- * 用法：
- *   node scripts/check-perf-shape.mjs [--root <dir>] [--baseline <path>] [--update-baseline]
+ * Usage:
+ *   node check-perf-shape.mjs [--root <dir>]
  *
- * 退出码：0 通过 / 1 存在违规
+ * Output: a detector@2 JSON document. Exit codes: 0 scan completed / 1 crash / 2 usage error.
  */
 
 import path from 'node:path';
 import { buildImportGraph } from './import-graph.mjs';
 import {
-  BASELINE_NOTE, allowFailures, baselineFailures, collectAllowMarkers, collectCodeFiles, compareSets, finish,
-  isTestPath, loadBaseline, parseArgs, parseFiles, patternNames, section, suffixDuplicates, walk, writeBaseline,
+  collectAllowMarkers, collectCodeFiles, dedupeKeys, emit, isTestPath, parseArgs, parseFiles, patternNames, stringValue, walk,
 } from './guard-common.mjs';
 
-const SCRIPT = 'check-perf-shape.mjs';
-const DEFAULT_BASELINE = path.join('scripts', 'perf-shape-baseline.json');
 const SCAN_DIRS = ['frontend/src', 'backend', 'assistant/server', 'assistant/client/src'];
 const SQL_DIRS = ['backend/app/', 'backend/routes/', 'backend/services/'];
 const SQL_EXEMPT = new Set(['backend/services/import-export.js']);
@@ -49,8 +52,8 @@ const QUERY_DIR = 'backend/db/queries/';
 const DB_MODULE = 'backend/db/index.js';
 const DB_METHODS = new Set(['prepare', 'exec', 'transaction', 'pragma']);
 
-// ─── AST 小工具 ──────────────────────────────────────────────────────────────
-// comments / tokens 是解析器附带的注释与 token 列表，不是语法树节点
+// ─── AST helpers ────────────────────────────────────────────────────────────
+// comments / tokens are the parser's attached comment and token lists, not syntax-tree nodes
 const SKIP_KEYS = new Set(['loc', 'range', 'parent', 'comments', 'tokens']);
 
 function* children(node) {
@@ -72,7 +75,7 @@ function isForEach(node) {
   return isMethodCall(node, new Set(['forEach'])) && FUNCTION_TYPES.has(node.arguments[0]?.type);
 }
 
-// 循环节点 → { body, vars }；vars 是这一层声明的循环变量
+// Loop node -> { body, vars }; vars are the loop variables this level declares
 function loopOf(node) {
   if (isForEach(node)) return { body: node.arguments[0], vars: node.arguments[0].params.flatMap((p) => patternNames(p)) };
   if (!LOOP_STATEMENTS.has(node.type)) return null;
@@ -92,7 +95,7 @@ function functionName(node, parent) {
   return null;
 }
 
-// 引用到的变量名（排除 a.b 的 b、{ b: 1 } 的 b 这类属性名）
+// Referenced variable names (excluding property names such as the b in a.b or in { b: 1 })
 function referencedNames(root) {
   const names = new Set();
   for (const [node, parent] of walk(root)) {
@@ -105,7 +108,7 @@ function referencedNames(root) {
   return names;
 }
 
-// 文件里由 .prepare(...) 得到的 Statement 变量名
+// Statement variable names obtained from .prepare(...) in the file
 function statementNames(tree) {
   const names = new Set();
   for (const [node] of walk(tree)) {
@@ -121,9 +124,10 @@ function importTarget(file, node) {
   return target.endsWith('.js') ? target : `${target}.js`;
 }
 
-// ─── 查询层里哪些导出真的访问数据库 ──────────────────────────────────────────
-// 返回 Map<查询文件, Set<会访问数据库的导出名>>。直接用到 db 模块、调用 prepare/exec/transaction，
-// 或调用了会访问数据库的本地函数 / 其他查询文件的导出，都算访问；认不出形状的导出一律算访问。
+// ─── Which query-layer exports really touch the database ────────────────────
+// Returns Map<query file, Set<export names that touch the database>>. Using the db module directly,
+// calling prepare/exec/transaction, or calling a local function or another query file's export that
+// touches the database all count as access; an export of unrecognised shape always counts as access.
 function queryShape(file) {
   const imports = new Map();
   const namespaces = new Map();
@@ -295,7 +299,7 @@ function dbEffectsByExport(parsed) {
   return { byExport: result, dbReadExports, dbWriteExports };
 }
 
-// 从查询层导入具有数据库 effect 的本地名；namespace import 逐个检查导出。
+// Local names imported from the query layer that have a database effect; namespace imports check each export.
 function queryImports(file, effectsByExport) {
   const names = new Set();
   const namespaces = new Set();
@@ -315,8 +319,8 @@ function queryImports(file, effectsByExport) {
   return { names, namespaces };
 }
 
-// ─── 事务上下文 ──────────────────────────────────────────────────────────────
-// 事务回调，以及在本文件里只从事务回调中被调用的未导出函数
+// ─── Transaction context ────────────────────────────────────────────────────
+// Transaction callbacks, and unexported functions that in this file are only called from transaction callbacks
 function transactionalFunctions(tree) {
   const tx = new Set();
   const declared = new Map();
@@ -352,7 +356,7 @@ function transactionalFunctions(tree) {
   return tx;
 }
 
-// ─── 规则 ────────────────────────────────────────────────────────────────────
+// ─── Rules ──────────────────────────────────────────────────────────────────
 function loopQueryCall(node, { stmtNames, queries }) {
   const { callee } = node;
   if (callee.type === 'Identifier' && queries.names.has(callee.name)) return callee.name;
@@ -382,15 +386,20 @@ function unfilteredSelects(text) {
     .map((stmt) => stmt.replace(/\s+/g, ' ').trim().slice(0, 80));
 }
 
-function checkDeepLoop(loopNode, body, outerLoops, ctx) {
+function checkDeepLoop(loopNode, body, outerLoops, state, ctx) {
   const outerVars = new Set(outerLoops.flatMap((l) => l.vars));
-  const used = [...referencedNames(body)].filter((n) => outerVars.has(n));
+  const used = [...referencedNames(body)].filter((n) => outerVars.has(n)).sort();
   if (!used.length) return;
-  ctx.found.hard.push(`${ctx.file.rel}:${loopNode.loc.start.line} 循环嵌套 ${outerLoops.length + 1} 层，`
-    + `最内层引用了外层循环变量 ${used.join(', ')}；先按键建索引再单层遍历`);
+  ctx.found.deepLoops.push({
+    rule: 'deep-loop',
+    key: `${ctx.file.rel}#${state.fn}#${used.join(',')}`,
+    path: ctx.file.rel,
+    line: loopNode.loc.start.line,
+    message: `loops nested ${outerLoops.length + 1} deep and the innermost references outer loop variable(s) ${used.join(', ')}; build an index by key first, then iterate once`,
+  });
 }
 
-// 事务里对预编译 Statement 的逐条写入（.prepare 本身在循环里时另外会被报）
+// Per-item writes of a prepared Statement inside a transaction (a .prepare that is itself in a loop is reported separately)
 function isBatchWrite(node, state, ctx) {
   return state.inTx && isMethodCall(node, new Set(['run'])) && node.callee.object.type === 'Identifier'
     && ctx.stmtNames.has(node.callee.object.name);
@@ -400,12 +409,26 @@ function inspectNode(node, state, ctx) {
   if ((state.loops.length || state.perItem) && node.type === 'CallExpression' && !isBatchWrite(node, state, ctx)) {
     const call = loopQueryCall(node, ctx);
     if (call && !ctx.allow.covers(ctx.file.rel, node.loc.start.line)) {
-      ctx.found.loopQueries.push(`${ctx.file.rel}#${state.fn}#${call}`);
+      ctx.found.loopQueries.push({
+        rule: 'loop-query',
+        key: `${ctx.file.rel}#${state.fn}#${call}`,
+        path: ctx.file.rel,
+        line: node.loc.start.line,
+        message: `per-item query ${call} inside a loop; query once and match in memory`,
+      });
     }
   }
   if (!ctx.sqlScope) return;
   const text = sqlText(node);
-  if (text) unfilteredSelects(text).forEach((sql) => ctx.found.selects.push(`${ctx.file.rel}#${state.fn}#${sql}`));
+  if (text) {
+    unfilteredSelects(text).forEach((sql) => ctx.found.selects.push({
+      rule: 'unbounded-select',
+      key: `${ctx.file.rel}#${state.fn}#${sql}`,
+      path: ctx.file.rel,
+      line: node.loc.start.line,
+      message: 'SELECT has neither WHERE nor LIMIT; add a condition or move it into the query layer',
+    }));
+  }
 }
 
 function visit(node, parent, state, ctx) {
@@ -426,17 +449,18 @@ function visit(node, parent, state, ctx) {
       continue;
     }
     const loops = [...next.loops, { vars: loop.vars }];
-    if (loops.length >= MAX_LOOP_DEPTH) checkDeepLoop(node, child, next.loops, ctx);
+    if (loops.length >= MAX_LOOP_DEPTH) checkDeepLoop(node, child, next.loops, next, ctx);
     visit(child, node, { ...next, loops }, ctx);
   }
 }
 
-// ─── 汇总 ────────────────────────────────────────────────────────────────────
-function collectPerfShape(root) {
+// ─── Summary ────────────────────────────────────────────────────────────────
+function main() {
+  const { root } = parseArgs(process.argv.slice(2));
   const rels = SCAN_DIRS.flatMap((dir) => collectCodeFiles(root, dir)).filter((rel) => !isTestPath(rel));
   const graph = buildImportGraph(root, rels, parseFiles(root, rels));
   const { parsed, parseFailures, modules, unresolvedStaticImports } = graph;
-  const found = { hard: [], loopQueries: [], selects: [] };
+  const found = { deepLoops: [], loopQueries: [], selects: [] };
   const allow = collectAllowMarkers(parsed, 'perf-shape');
   const queryEffects = dbEffectsByExport(parsed);
   for (const file of parsed) {
@@ -447,75 +471,28 @@ function collectPerfShape(root) {
       queries: queryImports(file, queryEffects.byExport),
       txFunctions: transactionalFunctions(file.tree),
     };
-    visit(file.tree, null, { loops: [], perItem: false, inTx: false, fn: '(顶层)' }, ctx);
+    visit(file.tree, null, { loops: [], perItem: false, inTx: false, fn: '(top-level)' }, ctx);
   }
   const edges = new Set([...modules].flatMap(([source, mod]) => mod.refs.map(({ target }) => `${source} -> ${target}`)));
-  return {
-    allow,
-    hard: found.hard,
-    loopQueries: suffixDuplicates(found.loopQueries),
-    selects: suffixDuplicates(found.selects),
+  const marks = allow.items();
+  emit({
+    guard: 'perf-shape',
+    coverage: {
+      planned: rels.length,
+      scanned: parsed.length,
+      modules: modules.size,
+      edges: edges.size,
+      db_read_exports: queryEffects.dbReadExports,
+      db_write_exports: queryEffects.dbWriteExports,
+    },
     parseFailures,
-    unresolvedStaticImports,
-    fileCount: rels.length,
-    parsedFileCount: parsed.length,
-    moduleCount: modules.size,
-    edgeCount: edges.size,
-    dbReadExports: queryEffects.dbReadExports,
-    dbWriteExports: queryEffects.dbWriteExports,
-  };
-}
-
-// ─── CLI ─────────────────────────────────────────────────────────────────────
-function main() {
-  const args = parseArgs(process.argv.slice(2), DEFAULT_BASELINE);
-  const shape = collectPerfShape(args.root);
-  const summary = `解析 ${shape.parsedFileCount}/${shape.fileCount} 个文件，${shape.moduleCount} 个模块 / ${shape.edgeCount} 条依赖边，`
-    + `循环内查询 ${shape.loopQueries.length} 处、`
-    + `无 WHERE/LIMIT 的 SELECT ${shape.selects.length} 处；查询层 db-read ${shape.dbReadExports} 个 / `
-    + `db-write ${shape.dbWriteExports} 个导出`;
-
-  const healthFailures = [];
-  if (shape.fileCount === 0) healthFailures.push(`没有扫到任何文件（${SCAN_DIRS.join('、')}），遍历逻辑可能坏了`);
-  if (shape.parsedFileCount !== shape.fileCount) {
-    healthFailures.push(`解析覆盖不完整：计划 ${shape.fileCount} 个文件，成功解析 ${shape.parsedFileCount} 个`);
-  }
-  if (shape.moduleCount !== shape.parsedFileCount) {
-    healthFailures.push(`依赖图构建不完整：已解析 ${shape.parsedFileCount} 个文件，仅构建 ${shape.moduleCount} 个模块`);
-  }
-  for (const rel of shape.parseFailures) healthFailures.push(`解析失败：${rel}（espree 无法解析，请检查语法）`);
-  for (const ref of shape.unresolvedStaticImports) {
-    healthFailures.push(`无法解析仓内静态引用：${ref.source} -> ${ref.specifier}（目标 ${ref.target}）`);
-  }
-
-  if (args.updateBaseline && healthFailures.length) {
-    finish('运行形态守卫', ['detector health 不通过', ...healthFailures], summary);
-  }
-  if (args.updateBaseline) {
-    writeBaseline(args.baselinePath, { loopQueries: shape.loopQueries, selectsWithoutFilter: shape.selects });
-    console.log(`[perf-shape] 基线已更新\nFile: ${path.relative(args.root, args.baselinePath)}\n${summary}写入基线`);
-    process.exit(0);
-  }
-
-  const failures = [];
-  failures.push(...healthFailures);
-  if (shape.hard.length) failures.push(section('运行形态违规（不进基线，必须改掉）：', shape.hard));
-
-  let baseline;
-  try {
-    baseline = loadBaseline(args.baselinePath, { loopQueries: [], selectsWithoutFilter: [] });
-  } catch (err) {
-    finish('运行形态守卫', [err.message], summary);
-  }
-  failures.push(...baselineFailures(compareSets(shape.loopQueries, baseline.loopQueries || []), {
-    script: SCRIPT, addedTitle: '这些查询在循环里逐项执行，而且不在基线里；改成一次查出再在内存里匹配',
-  }));
-  failures.push(...baselineFailures(compareSets(shape.selects, baseline.selectsWithoutFilter || []), {
-    script: SCRIPT, addedTitle: '这些 SELECT 既没有 WHERE 也没有 LIMIT，而且不在基线里；加条件或挪进 backend/db/queries',
-  }));
-  failures.push(...allowFailures(shape.allow));
-
-  finish('运行形态守卫', failures, summary, BASELINE_NOTE, shape.allow.listing());
+    unsupported: unresolvedStaticImports.map(({ source, specifier }) => ({
+      path: source, message: `cannot resolve static import ${specifier}`,
+    })),
+    hard: [...dedupeKeys(found.deepLoops), ...marks.hard],
+    advisory: marks.advisory,
+    findings: [...dedupeKeys(found.loopQueries), ...dedupeKeys(found.selects)],
+  });
 }
 
 main();

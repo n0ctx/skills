@@ -1,5 +1,6 @@
 /**
- * 守卫夹具测试的共用部分：在临时目录搭一个小仓库，对它运行守卫脚本，测试结束后删除
+ * Shared pieces of the detector fixture tests: build a small repository in a temporary directory,
+ * run a detector script against it, and delete the directory after the tests.
  */
 
 import { after } from 'node:test';
@@ -14,6 +15,11 @@ const SCRIPTS_DIR = path.dirname(fileURLToPath(import.meta.url));
 export function useGuardFixture(scriptName) {
   const dirs = [];
   after(() => dirs.forEach((d) => rmSync(d, { recursive: true, force: true })));
+
+  const run = (root, ...args) => spawnSync(
+    process.execPath, [path.join(SCRIPTS_DIR, scriptName), '--root', root, ...args], { encoding: 'utf8' },
+  );
+
   return {
     makeRoot() {
       const root = mkdtempSync(path.join(os.tmpdir(), 'we-guard-'));
@@ -27,8 +33,15 @@ export function useGuardFixture(scriptName) {
     read(root, rel) {
       return readFileSync(path.join(root, rel), 'utf8');
     },
-    run(root, ...args) {
-      return spawnSync(process.execPath, [path.join(SCRIPTS_DIR, scriptName), '--root', root, ...args], { encoding: 'utf8' });
+    run,
+    // Run the detector and parse stdout as a detector@2 document; doc is null when there is no
+    // output (for example on a usage error)
+    scan(root, ...args) {
+      const { status, stdout, stderr } = run(root, ...args);
+      return { status, doc: stdout.trim() ? JSON.parse(stdout) : null, stderr };
     },
   };
 }
+
+// Item list -> ['rule:key', ...] in the existing order, for whole-list comparison
+export const ruleKeys = (items) => items.map((item) => `${item.rule ?? item.metric}:${item.key}`);

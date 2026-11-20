@@ -11,7 +11,7 @@ Personal collection of agent skills. Each skill is a self-contained directory, w
 | Skill | Purpose |
 |---|---|
 | dag-engineering | Planning and control for large multi-session engineering work |
-| guard-ratchet | Ratchet-style source guards: complexity, dead code, duplication, N+1, cycles, test shape |
+| guard-ratchet | Executable quality guards for agent-maintained repos: adaptive thresholds, test integrity, security and supply chain, API and migration checks, tamper-resistant baselines |
 | reader-first-writing | Sentence-level readability for any text humans read, in any genre or language |
 | software-architecture | Architecture work: boundaries, trade-offs, migrations, decision records |
 | software-engineering | Coding, debugging, configuration, testing, review |

@@ -1,8 +1,10 @@
 {
   "name": "guard-ratchet",
-  "description": "Ratchet-style source guards for code quality gates",
-  "version": "1.0.0",
-  "author": { "name": "n0ctx" },
+  "description": "Executable quality guards that keep autonomous coding agents from making a repository worse",
+  "version": "2.0.0",
+  "author": {
+    "name": "n0ctx"
+  },
   "repository": "https://github.com/n0ctx/skills",
   "skills": "./"
 }

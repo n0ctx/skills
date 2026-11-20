@@ -1,0 +1,8 @@
+In file included from main.c:1:
+./h.h:2:33: warning: unused variable 'z' [-Wunused-variable]
+    2 | static inline void g(void){ int z; }
+      |                                 ^
+./h.h:1:12: warning: unused function 'unused_helper' [-Wunused-function]
+    1 | static int unused_helper(void) { return 1; }
+      |            ^~~~~~~~~~~~~
+2 warnings generated.

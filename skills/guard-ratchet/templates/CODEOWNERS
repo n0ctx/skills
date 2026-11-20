@@ -1,0 +1,7 @@
+# guard-ratchet: changes to the guards, their baselines, exceptions and CI need review by people who
+# are not the coding agent. Replace the placeholder owner and enable "require review from code owners".
+/guards/                @your-org/quality-owners
+/tools/guard/           @your-org/quality-owners
+/.github/workflows/     @your-org/quality-owners
+/.github/CODEOWNERS     @your-org/quality-owners
+/.gitlab-ci.yml         @your-org/quality-owners

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { useGuardFixture } from './guard-fixture.mjs';
+import { useGuardFixture, ruleKeys } from './guard-fixture.mjs';
 
-const { makeRoot, write, run } = useGuardFixture('check-perf-shape.mjs');
+const { makeRoot, write, scan } = useGuardFixture('check-perf-shape.mjs');
 
 const QUERIES = `export function reorder(db, ids) {
   const stmt = db.prepare('UPDATE t SET sort = ? WHERE id = ?');
@@ -25,17 +25,30 @@ function fixture() {
     '}',
     '',
   ].join('\n'));
-  assert.equal(run(root, '--update-baseline').status, 0);
   return root;
 }
 
-test('现状与基线一致时通过，两层循环与内存匹配不报', () => {
-  const result = run(fixture());
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /循环内查询 1 处、无 WHERE\/LIMIT 的 SELECT 1 处/);
+const BASE = [
+  'loop-query:backend/db/queries/t.js#reorder#stmt.run',
+  'unbounded-select:backend/routes/list.js#(top-level)#SELECT id FROM t',
+];
+
+test('baseline repository: a per-item write and one unbounded SELECT; nested loops, in-memory matching and the exempt file are quiet', () => {
+  const { status, doc } = scan(fixture());
+  assert.equal(status, 0);
+  assert.deepEqual(ruleKeys(doc.findings), BASE);
+  assert.deepEqual(doc.hard, []);
+  assert.deepEqual(doc.findings[0], {
+    rule: 'loop-query',
+    key: 'backend/db/queries/t.js#reorder#stmt.run',
+    count: 1,
+    path: 'backend/db/queries/t.js',
+    line: 3,
+    message: 'per-item query stmt.run inside a loop; query once and match in memory',
+  });
 });
 
-test('业务层在循环或数组遍历回调里调用查询层函数失败', () => {
+test('business code calling a query-layer function inside a loop or an array-iteration callback is a loop-query finding', () => {
   const root = fixture();
   write(root, 'backend/services/items.js', [
     "import { getById } from '../db/queries/items.js';",
@@ -44,13 +57,13 @@ test('业务层在循环或数组遍历回调里调用查询层函数失败', ()
     'export function tags(ids) { for (const id of ids) q.listTags(id); }',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /backend\/services\/items\.js#load#getById/);
-  assert.match(result.stderr, /backend\/services\/items\.js#tags#q\.listTags/);
+  const { doc } = scan(root);
+  const keys = ruleKeys(doc.findings);
+  assert.ok(keys.includes('loop-query:backend/services/items.js#load#getById'));
+  assert.ok(keys.includes('loop-query:backend/services/items.js#tags#q.listTags'));
 });
 
-test('循环头的取数来源只求值一次，不算循环内查询', () => {
+test('a source evaluated in the loop header runs once and is not a loop-query', () => {
   const root = fixture();
   write(root, 'backend/services/once.js', [
     "import { reorder } from '../db/queries/t.js';",
@@ -60,18 +73,18 @@ test('循环头的取数来源只求值一次，不算循环内查询', () => {
     '}',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(ruleKeys(scan(root).doc.findings), BASE);
 });
 
-test('在查询函数前增加无关函数，不改变 N+1 finding key', () => {
+test('adding an unrelated function before the query function does not change finding keys', () => {
   const root = fixture();
   write(root, 'backend/db/queries/t.js', `export function unrelated() {}\n${QUERIES}`);
-  const result = run(root);
-  assert.equal(result.status, 0, result.stderr);
+  const { doc } = scan(root);
+  assert.deepEqual(ruleKeys(doc.findings), BASE);
+  assert.equal(doc.findings[0].line, 4);
 });
 
-test('三层循环引用外层变量、新增循环内查询、新增无条件 SELECT 都失败', () => {
+test('three nested loops whose innermost body uses an outer loop variable is a hard deep-loop item', () => {
   const root = fixture();
   write(root, 'frontend/src/deep.js', [
     'export function deep(a, b, c) {',
@@ -79,27 +92,24 @@ test('三层循环引用外层变量、新增循环内查询、新增无条件 S
     '}',
     '',
   ].join('\n'));
-  write(root, 'backend/services/load.js', [
-    "export function load(db, ids) { for (const id of ids) db.prepare('SELECT * FROM t WHERE id = ?').get(id); }",
-    'export const sql = `SELECT name FROM t ORDER BY name`;',
+  const { doc } = scan(root);
+  assert.deepEqual(ruleKeys(doc.hard), ['deep-loop:frontend/src/deep.js#deep#x']);
+  assert.equal(doc.hard[0].line, 2);
+  assert.match(doc.hard[0].message, /nested 3 deep/);
+  assert.deepEqual(ruleKeys(doc.findings), BASE);
+});
+
+test('two nested loops that share a variable, and three levels that use no outer variable, are not reported', () => {
+  const root = fixture();
+  write(root, 'frontend/src/shallow.js', [
+    'export function two(a, b) { for (const x of a) { for (const y of b) { if (x === y) return; } } }',
+    'export function three(a, b, c) { for (const x of a) { for (const y of b) { for (const z of c) { use(z); } } } }',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /deep\.js:2 循环嵌套 3 层，最内层引用了外层循环变量 x/);
-  assert.match(result.stderr, /backend\/services\/load\.js#load#db\.prepare/);
-  assert.match(result.stderr, /backend\/services\/load\.js#\(顶层\)#SELECT name FROM t ORDER BY name/);
+  assert.deepEqual(scan(root).doc.hard, []);
 });
 
-test('基线里的循环内查询消失后未清理算虚挂', () => {
-  const root = fixture();
-  write(root, 'backend/db/queries/t.js', 'export function reorder() {}\n');
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /基线与现状对不上[\s\S]*t\.js#reorder#stmt\.run/);
-});
-
-test('事务里逐条写预编译语句不报，事务里逐条读照报', () => {
+test('batch writes of a prepared statement inside a transaction are not reported, but per-item reads there are', () => {
   const root = fixture();
   write(root, 'backend/db/queries/batch.js', [
     "import db from '../index.js';",
@@ -115,13 +125,12 @@ test('事务里逐条写预编译语句不报，事务里逐条读照报', () =>
     '}',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /batch\.js#save#read\.get/);
-  assert.doesNotMatch(result.stderr, /stmt\.run/);
+  const keys = ruleKeys(scan(root).doc.findings);
+  assert.ok(keys.includes('loop-query:backend/db/queries/batch.js#save#read.get'));
+  assert.ok(!keys.some((k) => k.includes('stmt.run') && k.includes('batch.js')));
 });
 
-test('查询目录里不碰数据库的纯函数不算查询', () => {
+test('pure functions in the query directory are not queries; a function that wraps a real query is', () => {
   const root = fixture();
   write(root, 'backend/db/queries/items.js', [
     "import db from '../index.js';",
@@ -135,13 +144,12 @@ test('查询目录里不碰数据库的纯函数不算查询', () => {
     'export function load(ids) { for (const id of ids) { normalize(id); getViaHelper(id); } }',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /items\.js#load#getViaHelper/);
-  assert.doesNotMatch(result.stderr, /#normalize/);
+  const keys = ruleKeys(scan(root).doc.findings);
+  assert.ok(keys.includes('loop-query:backend/services/items.js#load#getViaHelper'));
+  assert.ok(!keys.some((k) => k.endsWith('#normalize')));
 });
 
-test('db-read 与 db-write 经本地函数和跨模块调用传播，N+1 保持拦截', () => {
+test('db-read and db-write effects propagate through local functions and across modules, so N+1 is still caught', () => {
   const root = fixture();
   write(root, 'backend/db/index.js', 'export default {};\n');
   write(root, 'backend/db/queries/read.js', [
@@ -166,14 +174,15 @@ test('db-read 与 db-write 经本地函数和跨模块调用传播，N+1 保持�
     'export function repeat(ids) { for (const id of ids) { loadOne(id); saveOne(id); } }',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /repeat\.js#repeat#loadOne/);
-  assert.match(result.stderr, /repeat\.js#repeat#saveOne/);
-  assert.match(result.stderr, /查询层 db-read 3 个 \/ db-write 3 个导出/);
+  const { doc } = scan(root);
+  const keys = ruleKeys(doc.findings);
+  assert.ok(keys.includes('loop-query:backend/services/repeat.js#repeat#loadOne'));
+  assert.ok(keys.includes('loop-query:backend/services/repeat.js#repeat#saveOne'));
+  assert.equal(doc.coverage.db_read_exports, 3);
+  assert.equal(doc.coverage.db_write_exports, 3);
 });
 
-test('默认导出的数据库函数仍被识别为查询 effect', () => {
+test('a default-exported database function is still recognised as a query', () => {
   const root = fixture();
   write(root, 'backend/db/index.js', 'export default {};\n');
   write(root, 'backend/db/queries/default-read.js', [
@@ -186,39 +195,65 @@ test('默认导出的数据库函数仍被识别为查询 effect', () => {
     'export function load(ids) { for (const id of ids) readById(id); }',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /default-read\.js#load#readById/);
+  const keys = ruleKeys(scan(root).doc.findings);
+  assert.ok(keys.includes('loop-query:backend/services/default-read.js#load#readById'));
 });
 
-test('解析失败、空目录和不完整扫描不通过，也不写基线', () => {
-  const root = makeRoot();
-  write(root, 'frontend/src/bad.js', 'export const = ;\n');
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /解析失败：frontend\/src\/bad\.js/);
-
-  const update = run(root, '--update-baseline');
-  assert.equal(update.status, 1);
-  assert.match(update.stderr, /detector health 不通过/);
-
-  const importRoot = makeRoot();
-  write(importRoot, 'backend/services/missing.js', "import '../db/queries/nope.js';\n");
-  const unresolved = run(importRoot);
-  assert.equal(unresolved.status, 1);
-  assert.match(unresolved.stderr, /无法解析仓内静态引用：backend\/services\/missing\.js/);
-
-  const empty = run(makeRoot());
-  assert.equal(empty.status, 1);
-  assert.match(empty.stderr, /没有扫到任何文件/);
+test('a computed method name such as db["prepare"] is analysed rather than crashing the detector', () => {
+  const root = fixture();
+  write(root, 'backend/db/index.js', 'export default {};\n');
+  write(root, 'backend/db/queries/computed.js', [
+    "import db from '../index.js';",
+    "export function byId(id) { return db['prepare']('SELECT * FROM items WHERE id = ?').get(id); }",
+    '',
+  ].join('\n'));
+  write(root, 'backend/services/computed.js', [
+    "import { byId } from '../db/queries/computed.js';",
+    'export function load(ids) { for (const id of ids) byId(id); }',
+    '',
+  ].join('\n'));
+  const { status, doc } = scan(root);
+  assert.equal(status, 0);
+  assert.ok(ruleKeys(doc.findings).includes('loop-query:backend/services/computed.js#load#byId'));
 });
 
-test('guard-allow 标记覆盖紧随其后的语句段，并在输出里列出', () => {
+test('a repeated loop-query in one function gets ~2 in order of appearance', () => {
+  const root = fixture();
+  write(root, 'backend/services/twice.js', [
+    "import { getById } from '../db/queries/items.js';",
+    'export function twice(ids) {',
+    '  for (const id of ids) getById(id);',
+    '  for (const id of ids) getById(id);',
+    '}',
+    '',
+  ].join('\n'));
+  const keys = ruleKeys(scan(root).doc.findings);
+  assert.ok(keys.includes('loop-query:backend/services/twice.js#twice#getById'));
+  assert.ok(keys.includes('loop-query:backend/services/twice.js#twice#getById ~2'));
+});
+
+test('a per-item prepare in a loop, and a SELECT with neither WHERE nor LIMIT, are findings; filtered SELECTs and other directories are not', () => {
+  const root = fixture();
+  write(root, 'backend/services/load.js', [
+    "export function load(db, ids) { for (const id of ids) db.prepare('SELECT * FROM t WHERE id = ?').get(id); }",
+    'export const sql = `SELECT name FROM t ORDER BY name`;',
+    "export const filtered = 'SELECT name FROM t WHERE id = 1';",
+    "export const limited = 'SELECT name FROM t LIMIT 5';",
+    '',
+  ].join('\n'));
+  write(root, 'backend/lib/free.js', "export const free = 'SELECT name FROM t';\n");
+  const keys = ruleKeys(scan(root).doc.findings);
+  assert.ok(keys.includes('loop-query:backend/services/load.js#load#db.prepare'));
+  assert.ok(keys.includes('unbounded-select:backend/services/load.js#(top-level)#SELECT name FROM t ORDER BY name'));
+  assert.ok(!keys.some((k) => k.includes('WHERE id = 1') || k.includes('LIMIT 5') || k.includes('backend/lib/')));
+});
+
+test('a guard-allow marker covers the statements right after it, and is listed as advisory', () => {
   const root = fixture();
   write(root, 'backend/services/seed.js', [
     "import { getById } from '../db/queries/items.js';",
     'export function seed(ids) {',
-    '  // guard-allow(perf-shape): 固定小表',
+    '  // guard-allow(perf-shape): fixed small table',
     '  const first = ids[0];',
     '  for (const id of ids) getById(id, first);',
     '',
@@ -226,26 +261,53 @@ test('guard-allow 标记覆盖紧随其后的语句段，并在输出里列出',
     '}',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.equal(result.stderr.match(/seed\.js#seed#getById/g)?.length, 1);
-  assert.match(result.stderr, /有意保留（guard-allow）1 处：\n {2}backend\/services\/seed\.js:3 固定小表/);
+  const { doc } = scan(root);
+  const keys = ruleKeys(doc.findings).filter((k) => k.includes('seed.js'));
+  assert.deepEqual(keys, ['loop-query:backend/services/seed.js#seed#getById']);
+  assert.equal(doc.findings.find((f) => f.key.includes('seed.js')).line, 7);
+  assert.deepEqual(doc.advisory.map((a) => [a.rule, a.path, a.line, a.message]),
+    [['guard-allow', 'backend/services/seed.js', 3, 'fixed small table']]);
+  assert.deepEqual(doc.hard, []);
 });
 
-test('guard-allow 没写理由、守卫名写错、已无违规都失败', () => {
+test('guard-allow without a reason, with a wrong guard name, or over code with no violation is hard guard-allow-invalid', () => {
   const root = fixture();
   write(root, 'backend/services/marks.js', [
     '// guard-allow(perf-shape)',
     'export const a = 1;',
-    '// guard-allow(perf): 写错名字',
+    '// guard-allow(perf): misspelt guard name',
     'export const b = 2;',
-    '// guard-allow(perf-shape): 这里其实没有循环查询',
+    '// guard-allow(perf-shape): there is no loop query here',
     'export const c = 3;',
     '',
   ].join('\n'));
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /marks\.js:1 标记没写理由/);
-  assert.match(result.stderr, /marks\.js:3 守卫名 `perf` 不存在/);
-  assert.match(result.stderr, /marks\.js:5 覆盖的代码里已经没有 perf-shape 违规/);
+  const { doc } = scan(root);
+  assert.deepEqual(ruleKeys(doc.hard), [
+    'guard-allow-invalid:backend/services/marks.js#missing-reason:perf-shape',
+    'guard-allow-invalid:backend/services/marks.js#unknown-guard:perf',
+    'guard-allow-invalid:backend/services/marks.js#unused:there is no loop query here',
+  ]);
+  assert.deepEqual(doc.hard.map((h) => h.line), [1, 3, 5]);
+});
+
+test('a file that does not parse lands in parse_failures and an unresolvable import in unsupported', () => {
+  const root = makeRoot();
+  write(root, 'frontend/src/bad.js', 'export const = ;\n');
+  write(root, 'backend/services/missing.js', "import '../db/queries/nope.js';\n");
+  const { status, doc } = scan(root);
+  assert.equal(status, 0);
+  assert.deepEqual(doc.parse_failures, ['frontend/src/bad.js']);
+  assert.deepEqual(doc.unsupported, [{
+    path: 'backend/services/missing.js', message: 'cannot resolve static import ../db/queries/nope.js',
+  }]);
+  assert.equal(doc.coverage.planned, 2);
+  assert.equal(doc.coverage.scanned, 1);
+});
+
+test('an empty scan reports planned 0 and no query-layer counts', () => {
+  const { status, doc } = scan(makeRoot());
+  assert.equal(status, 0);
+  assert.deepEqual(doc.coverage, {
+    planned: 0, scanned: 0, unit: 'files', modules: 0, edges: 0, db_read_exports: 0, db_write_exports: 0,
+  });
 });

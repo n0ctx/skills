@@ -1,16 +1,22 @@
 /**
- * 源码守卫公共部分：仓库遍历、espree 解析、命令行参数、基线读写、有意保留标记
+ * Shared detector pieces: repository traversal, espree parsing, command-line arguments,
+ * detector@2 output, and the intentional-retention marker.
  *
- * 供 check-duplication / check-dead-code / check-tests / check-perf-shape 使用，
- * 扫描规则与 check-complexity.mjs 一致：跳过依赖/产物/数据目录和点开头的目录。
+ * Detectors only measure: stdout carries one guard-ratchet/detector@2 JSON document. Baselines,
+ * new/worse/stale comparison, exceptions, thresholds and coverage floors all belong to
+ * scripts/guard.py. Nothing here reads or writes a baseline or decides pass/fail.
  *
- * 有意保留标记：检测器分不清、但确实是有意为之的写法，在代码旁边写
- *   // guard-allow(<守卫名>): <理由>
- * 标记单独占一行，覆盖紧随其后的那条语句，以及与它紧挨着、中间没有空行的后续同级语句。被覆盖的发现不进基线；标记跟着代码走，搬家改名不失效。
- * 没写理由、守卫名写错、覆盖范围里已经没有违规的标记都算失败；每次运行都列出全部标记。
+ * Intentional-retention marker: for code a detector cannot tell is deliberate, write next to it
+ *   // guard-allow(<guard name>): <reason>
+ * The marker sits on its own line and covers the statement right after it, plus the following
+ * sibling statements that touch it with no blank line in between. Covered findings are not
+ * emitted; the marker travels with the code, so moving or renaming does not invalidate it.
+ * Every valid marker is listed as advisory (rule: guard-allow). A marker with no reason, a wrong
+ * guard name, no code after it, or no violation left in its range is hard
+ * (rule: guard-allow-invalid).
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -19,12 +25,13 @@ const require = createRequire(import.meta.url);
 const espree = require('espree');
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const BASELINE_VERSION = 1;
-export const BASELINE_NOTE = '，基线外无新增';
+const SCHEMA = 'guard-ratchet/detector@2';
+const TOOL_VERSION = '2.0.0';
 
 export const CODE_SUFFIXES = new Set(['.js', '.jsx', '.mjs', '.cjs']);
 const SKIP_DIRS = new Set([
   'node_modules', 'vendor', 'generated', 'dist', 'coverage', 'build', 'test-results', 'data', 'node-runtime',
+  '__pycache__',
 ]);
 
 export function isTestPath(rel) {
@@ -33,25 +40,27 @@ export function isTestPath(rel) {
 
 const isCodeFile = (name) => CODE_SUFFIXES.has(path.extname(name).toLowerCase());
 
-// 返回 root 下 relDir 内文件名满足 accept 的文件（相对 root，`/` 分隔，已排序）；relDir 不存在时返回空
-export function collectFiles(root, relDir = '', accept = isCodeFile) {
+// Files under root/relDir whose name satisfies accept (relative to root, `/` separated, sorted);
+// empty when relDir does not exist. Files and directories for which ignore(rel) is true are skipped.
+export function collectFiles(root, relDir = '', accept = isCodeFile, ignore = () => false) {
   const out = [];
   const start = path.join(root, relDir);
-  if (existsSync(start)) walkDir(start, relDir, accept, out);
+  if (existsSync(start)) walkDir(start, relDir, accept, ignore, out);
   return out.sort();
 }
 
-export function collectCodeFiles(root, relDir = '') {
-  return collectFiles(root, relDir, isCodeFile);
+export function collectCodeFiles(root, relDir = '', ignore = undefined) {
+  return collectFiles(root, relDir, isCodeFile, ignore);
 }
 
-function walkDir(dir, relPrefix, accept, out) {
+function walkDir(dir, relPrefix, accept, ignore, out) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isSymbolicLink()) continue;
     const rel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name;
+    if (ignore(rel)) continue;
     if (entry.isDirectory()) {
       if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
-      walkDir(path.join(dir, entry.name), rel, accept, out);
+      walkDir(path.join(dir, entry.name), rel, accept, ignore, out);
     } else if (entry.isFile() && accept(entry.name)) {
       out.push(rel);
     }
@@ -70,12 +79,12 @@ function parseCode(text, { tokens = false } = {}) {
         tokens,
         comment: true,
       });
-    } catch { /* 尝试下一种 sourceType */ }
+    } catch { /* try the next sourceType */ }
   }
   return null;
 }
 
-// 读取并解析一批文件；解析失败的相对路径放进 parseFailures
+// Read and parse a batch of files; relative paths that fail to parse go into parseFailures
 export function parseFiles(root, rels, options) {
   const parsed = [];
   const parseFailures = [];
@@ -88,19 +97,21 @@ export function parseFiles(root, rels, options) {
   return { parsed, parseFailures };
 }
 
-// comments / tokens 是解析器附带的注释与 token 列表，不是语法树节点
+// comments / tokens are the parser's attached comment and token lists, not syntax-tree nodes
 const SKIP_KEYS = new Set(['loc', 'range', 'parent', 'comments', 'tokens']);
 
-export function* walk(node, parent = null) {
+// When prune(node, parent) is true the node is yielded but not descended into
+export function* walk(node, parent = null, prune = null) {
   if (!node || typeof node.type !== 'string') return;
   yield [node, parent];
+  if (prune?.(node, parent)) return;
   for (const key of Object.keys(node)) {
     if (SKIP_KEYS.has(key)) continue;
     const value = node[key];
     if (Array.isArray(value)) {
-      for (const child of value) if (child && typeof child.type === 'string') yield* walk(child, node);
+      for (const child of value) if (child && typeof child.type === 'string') yield* walk(child, node, prune);
     } else if (value && typeof value.type === 'string') {
-      yield* walk(value, node);
+      yield* walk(value, node, prune);
     }
   }
 }
@@ -122,119 +133,82 @@ export function stringValue(node) {
   return null;
 }
 
-// ─── CLI 与基线 ───────────────────────────────────────────────────────────────
-export function parseArgs(argv, defaultBaseline) {
-  const args = { root: REPO_ROOT, baseline: defaultBaseline, updateBaseline: false };
+// ─── CLI and output ─────────────────────────────────────────────────────────
+export function usageError(message) {
+  console.error(`error: ${message}`);
+  process.exit(2);
+}
+
+// Common arguments: --root <dir>; ignore enables --ignore <glob> (repeatable); paths enables positional
+// arguments. Anything else exits 2. Baseline arguments no longer exist: scripts/guard.py owns the ratchet.
+export function parseArgs(argv, { ignore = false, paths = false } = {}) {
+  const args = { root: REPO_ROOT, ignores: [], paths: [] };
+  const valueOf = (i, flag) => {
+    if (i >= argv.length) usageError(`${flag} requires a value`);
+    return argv[i];
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--update-baseline') args.updateBaseline = true;
-    else if (arg === '--baseline') args.baseline = argv[++i];
-    else if (arg === '--root') args.root = path.resolve(argv[++i]);
-    else {
-      console.error(`✖ 未知参数: ${arg}`);
-      process.exit(2);
-    }
-  }
-  if (args.baseline) {
-    args.baselinePath = path.isAbsolute(args.baseline) ? args.baseline : path.join(args.root, args.baseline);
+    if (arg === '--root') args.root = path.resolve(valueOf(++i, arg));
+    else if (ignore && arg === '--ignore') args.ignores.push(valueOf(++i, arg));
+    else if (paths && !arg.startsWith('-')) args.paths.push(arg);
+    else usageError(`unknown argument: ${arg}`);
   }
   return args;
 }
 
-export function loadBaseline(absPath, empty) {
-  if (!existsSync(absPath)) return { version: BASELINE_VERSION, ...empty };
-  const data = JSON.parse(readFileSync(absPath, 'utf8'));
-  if (data.version !== BASELINE_VERSION) throw new Error(`不支持的基线版本: ${data.version}`);
-  return data;
-}
+const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
-export function writeBaseline(absPath, payload) {
-  mkdirSync(path.dirname(absPath), { recursive: true });
-  writeFileSync(absPath, JSON.stringify({ version: BASELINE_VERSION, ...payload }, null, 2) + '\n', 'utf8');
-}
-
-// 计数型基线对比：current / baseline 都是 { key: count }，只登记 count > allowed 的条目；
-// describe(key) 可给新增条目附加说明
-export function compareCounts(current, baseline, { allowed = 0, describe = (key) => `${key}: ${current[key]}` } = {}) {
-  const added = [];
-  const grew = [];
-  const stale = [];
-  for (const [key, count] of Object.entries(current)) {
-    if (count <= allowed) continue;
-    if (!(key in baseline)) added.push(describe(key));
-    else if (count > baseline[key]) grew.push(`${key}: ${baseline[key]} → ${count}`);
-  }
-  for (const [key, base] of Object.entries(baseline)) {
-    const count = current[key] ?? 0;
-    if (count < base) stale.push(`${key}: 记的是 ${base}，实际 ${count}`);
-  }
-  return { added: added.sort(), grew: grew.sort(), stale: stale.sort() };
-}
-
-// 集合型基线对比：只看条目有没有
-export function compareSets(current, baseline) {
-  const now = new Set(current);
-  const recorded = new Set(baseline);
-  return {
-    added: [...now].filter((key) => !recorded.has(key)).sort(),
-    stale: [...recorded].filter((key) => !now.has(key)).sort(),
-  };
-}
-
-// 同一 key 第二次起追加 ~2 ~3 区分，返回排序后的列表
-export function suffixDuplicates(keys) {
+// From the second occurrence of the same (rule, key) on, append ~2 ~3. Numbering follows order of
+// appearance, so adding entries elsewhere never renumbers existing keys.
+export function dedupeKeys(items) {
   const seen = new Map();
-  return keys.map((key) => {
-    const n = (seen.get(key) || 0) + 1;
-    seen.set(key, n);
-    return n > 1 ? `${key} ~${n}` : key;
-  }).sort();
+  return items.map((item) => {
+    const id = `${item.rule ?? item.metric}\0${item.key}`;
+    const n = (seen.get(id) || 0) + 1;
+    seen.set(id, n);
+    return n > 1 ? { ...item, key: `${item.key} ~${n}` } : item;
+  });
 }
 
-// 把 key 列表转成 { key: 出现次数 }
-export function countKeys(keys) {
-  const counts = {};
-  for (const key of keys) counts[key] = (counts[key] || 0) + 1;
-  return counts;
+const byKey = (a, b) => compare(a.key, b.key) || compare(a.rule ?? a.metric, b.rule ?? b.metric);
+const ruleItem = ({ rule, key, path: file, line, message }) => ({ rule, key, path: file, line, message });
+
+/**
+ * Print a guard-ratchet/detector@2 document: fill defaults, sort every array, print one JSON object.
+ * `guard` is the guard name and the tool name is always check-<guard>.mjs. coverage needs planned and
+ * scanned; the rest are numeric counters. Exit code stays 0 once the scan ran, even with findings;
+ * scripts/guard.py decides what fails.
+ */
+export function emit({
+  guard, coverage: { planned, scanned, ...counters }, parseFailures = [], unsupported = [],
+  hard = [], advisory = [], findings = [], metrics = [],
+}) {
+  const doc = {
+    schema: SCHEMA,
+    guard,
+    tool: { name: `check-${guard}.mjs`, version: TOOL_VERSION },
+    coverage: { planned, scanned, unit: 'files', ...counters },
+    parse_failures: [...parseFailures].sort(),
+    unsupported: unsupported.map(({ path: file, message }) => ({ path: file, message }))
+      .sort((a, b) => compare(a.path, b.path) || compare(a.message, b.message)),
+    hard: hard.map(ruleItem).sort(byKey),
+    advisory: advisory.map(ruleItem).sort(byKey),
+    findings: findings.map(({ count = 1, ...rest }) => {
+      const { rule, key, path: file, line, message } = ruleItem(rest);
+      return { rule, key, count, path: file, line, ...(message === undefined ? {} : { message }) };
+    }).sort(byKey),
+    metrics: metrics.map(({ metric, key, path: file, line, value }) => ({ metric, key, path: file, line, value }))
+      .sort(byKey),
+  };
+  process.stdout.write(`${JSON.stringify(doc, null, 2)}\n`);
 }
 
-// passNote 只在通过时附在摘要后面；allowed 是有意保留标记清单，通过与否都列出
-export function finish(label, failures, summary, passNote = '', allowed = []) {
-  const listing = allowed.length ? `${section(`有意保留（guard-allow）${allowed.length} 处：`, allowed)}\n` : '';
-  if (failures.length) {
-    console.error(`\n✖ ${label}未通过（${summary}）\n`);
-    for (const f of failures) console.error(`${f}\n`);
-    if (listing) console.error(listing);
-    process.exit(1);
-  }
-  console.log(`✓ ${label}通过：${summary}${passNote}`);
-  if (listing) console.log(listing);
-  process.exit(0);
-}
-
-export function section(title, lines) {
-  return `${title}\n${lines.map((l) => `  ${l}`).join('\n')}`;
-}
-
-// 统一处理「新增 / 上涨 / 虚挂」三类基线差异
-export function baselineFailures(diff, { script, addedTitle }) {
-  const failures = [];
-  const update = `\`node scripts/${script} --update-baseline\``;
-  if (diff.added.length) {
-    failures.push(section(`${addedTitle}（故意保留就运行 ${update} 并在提交说明里写理由）：`, diff.added));
-  }
-  if (diff.grew?.length) failures.push(section('基线里的条目又变多了（只许降不许升）：', diff.grew));
-  if (diff.stale.length) {
-    failures.push(section(`基线与现状对不上（已改善或已消失），运行 ${update} 清掉：`, diff.stale));
-  }
-  return failures;
-}
-
-// ─── 有意保留标记 ─────────────────────────────────────────────────────────────
+// ─── Intentional-retention markers ──────────────────────────────────────────
 const ALLOW_GUARDS = ['dead-code', 'duplication', 'perf-shape', 'tests'];
 const ALLOW_RE = /^\s*\*?\s*guard-allow\(([^)]*)\)\s*(?::\s*(.*?))?\s*$/s;
 
-// 每行开头最大的语句/表达式节点，连同它所在的同级列表
+// The largest statement/expression node starting on each line, with its parent
 function lineStarts(tree) {
   const byLine = new Map();
   for (const [node, parent] of walk(tree)) {
@@ -255,7 +229,7 @@ function siblingsOf(node, parent) {
   return null;
 }
 
-// 标记覆盖的行区间 [start, end]：起始节点 + 后面紧挨着（中间没有空行）的同级节点
+// Line range [start, end] a marker covers: the first node plus the sibling nodes right after it with no blank line between
 function coverage(tree, comment, byLine) {
   let line = comment.loc.end.line + 1;
   while (line <= tree.loc.end.line && !byLine.has(line)) line += 1;
@@ -271,56 +245,53 @@ function coverage(tree, comment, byLine) {
 }
 
 class AllowMarkers {
-  constructor(guard, markers, malformed) {
-    this.guard = guard;
+  constructor(markers, invalid) {
     this.markers = markers;
-    this.malformed = malformed;
+    this.invalid = invalid;
   }
 
-  // 某处发现是否被标记覆盖；覆盖到的标记记为用过
+  // Whether a finding location is covered by a marker; covering markers are recorded as used
   covers(rel, line) {
     const hits = this.markers.filter((m) => m.rel === rel && line >= m.range[0] && line <= m.range[1]);
     hits.forEach((m) => { m.used = true; });
     return hits.length > 0;
   }
 
-  // 检测跑完后调用：没写理由 / 守卫名写错 / 覆盖范围里已无违规的标记
-  problems() {
-    const stale = this.markers.filter((m) => !m.used)
-      .map((m) => `${m.where} 覆盖的代码里已经没有 ${this.guard} 违规，删掉这个标记`);
-    return [...this.malformed, ...stale];
-  }
-
-  listing() {
-    return this.markers.map((m) => `${m.where} ${m.reason}`);
+  // Call after detection. advisory: every valid marker; hard: malformed markers and markers whose range has no violation left
+  items() {
+    const advisory = this.markers.map((m) => ({
+      rule: 'guard-allow', key: `${m.rel}#${m.reason}`, path: m.rel, line: m.line, message: m.reason,
+    }));
+    const unused = this.markers.filter((m) => !m.used).map((m) => ({
+      rel: m.rel, line: m.line, kind: `unused:${m.reason}`, message: `the covered code no longer has a ${m.guard} violation; delete this marker`,
+    }));
+    const hard = [...this.invalid, ...unused].map((p) => ({
+      rule: 'guard-allow-invalid', key: `${p.rel}#${p.kind}`, path: p.rel, line: p.line, message: p.message,
+    }));
+    return { advisory: dedupeKeys(advisory), hard: dedupeKeys(hard) };
   }
 }
 
-/** 收集 guard 这个守卫在 parsed 文件里的标记，返回 AllowMarkers */
+/** Collect the markers for `guard` in the parsed files and return an AllowMarkers */
 export function collectAllowMarkers(parsed, guard) {
   const markers = [];
-  const malformed = [];
+  const invalid = [];
   for (const file of parsed) {
     const byLine = lineStarts(file.tree);
     for (const comment of file.tree.comments || []) {
       const match = ALLOW_RE.exec(comment.value);
       if (!match) continue;
-      const where = `${file.rel}:${comment.loc.start.line}`;
+      const line = comment.loc.start.line;
       const name = match[1].trim();
       const reason = (match[2] ?? '').trim();
       const range = coverage(file.tree, comment, byLine);
-      if (!ALLOW_GUARDS.includes(name)) malformed.push(`${where} 守卫名 \`${name}\` 不存在（可用：${ALLOW_GUARDS.join('、')}）`);
+      const problem = (kind, message) => invalid.push({ rel: file.rel, line, kind, message });
+      if (!ALLOW_GUARDS.includes(name)) problem(`unknown-guard:${name}`, `guard name \`${name}\` does not exist (available: ${ALLOW_GUARDS.join(', ')})`);
       else if (name !== guard) continue;
-      else if (!reason) malformed.push(`${where} 标记没写理由：写成 \`guard-allow(${name}): 为什么这里是有意的\``);
-      else if (!range) malformed.push(`${where} 标记后面没有代码可覆盖`);
-      else markers.push({ rel: file.rel, where, reason, range, used: false });
+      else if (!reason) problem(`missing-reason:${name}`, `marker has no reason: write \`guard-allow(${name}): why this is deliberate\``);
+      else if (!range) problem(`no-target:${name}`, 'no code after the marker to cover');
+      else markers.push({ rel: file.rel, line, guard, reason, range, used: false });
     }
   }
-  return new AllowMarkers(guard, markers, malformed);
-}
-
-// 标记问题并入失败列表
-export function allowFailures(allow) {
-  const problems = allow.problems();
-  return problems.length ? [section('有意保留标记有问题（guard-allow）：', problems)] : [];
+  return new AllowMarkers(markers, invalid);
 }

@@ -1,20 +1,23 @@
 #!/usr/bin/env node
 /**
- * 循环依赖守卫：正式代码之间不许出现加载期的循环引用
+ * Circular-dependency detector: load-time cycles among production code, one finding per cycle.
  *
- * 扫描全仓库正式代码（不含测试）。边取 import / export from / require；import() 是运行到
- * 才加载，不构成加载期循环，不算边。引入时仓库里没有循环，所以不设基线，出现即失败。
+ * Scans all production code in the repository (tests excluded). Edges come from import /
+ * export from / require; import() loads only when execution reaches it, so it is no load-time
+ * cycle and not an edge. Every cycle is emitted as a finding (rule: cycle, key: the sorted
+ * members); whether it counts as a hard rule is up to the scripts/guard.py policy. Literal
+ * in-repo references that cannot be resolved go into unsupported.
  *
- * 用法：
- *   node scripts/check-cycles.mjs [--root <dir>]
+ * Usage:
+ *   node check-cycles.mjs [--root <dir>]
  *
- * 退出码：0 通过 / 1 存在循环或解析失败
+ * Output: a detector@2 JSON document. Exit codes: 0 scan completed / 1 crash / 2 usage error.
  */
 
-import { collectCodeFiles, finish, isTestPath, parseArgs, section } from './guard-common.mjs';
+import { collectCodeFiles, emit, isTestPath, parseArgs } from './guard-common.mjs';
 import { buildImportGraph } from './import-graph.mjs';
 
-// Tarjan 强连通分量：返回成员数 > 1 的分量（即循环），各分量内按路径排序
+// Tarjan strongly connected components: returns the components with more than one member (the cycles), members sorted by path
 function findCycles(edges) {
   let counter = 0;
   const index = new Map();
@@ -49,29 +52,32 @@ function findCycles(edges) {
 }
 
 function main() {
-  const args = parseArgs(process.argv.slice(2), null);
+  const args = parseArgs(process.argv.slice(2));
   const rels = collectCodeFiles(args.root).filter((rel) => !isTestPath(rel));
   const { parsed, parseFailures, modules, unresolvedStaticImports } = buildImportGraph(args.root, rels);
   const edges = new Map([...modules].map(([rel, { refs }]) => [
     rel, [...new Set(refs.filter((r) => !r.lazy).map((r) => r.target))],
   ]));
-  const cycles = findCycles(edges);
-  const edgeCount = [...edges.values()].reduce((sum, targets) => sum + targets.length, 0);
-
-  const failures = [];
-  if (rels.length === 0) failures.push('没有扫到任何文件，遍历逻辑可能坏了');
-  if (parsed.length !== rels.length) failures.push(`解析覆盖不完整：计划 ${rels.length} 个文件，成功解析 ${parsed.length} 个`);
-  for (const rel of parseFailures) failures.push(`解析失败：${rel}（espree 无法解析，请检查语法）`);
-  if (modules.size !== parsed.length) failures.push(`依赖图构建不完整：${parsed.length} 个已解析文件，仅构建 ${modules.size} 个模块`);
-  for (const ref of unresolvedStaticImports) {
-    failures.push(`无法解析仓内静态引用：${ref.source} -> ${ref.specifier}（目标 ${ref.target}）`);
-  }
-  if (cycles.length) {
-    failures.push(section('这些模块互相引用成环；把共用部分抽到下层模块，或改成 import() 按需加载：',
-      cycles.map((c) => c.join(' ↔ '))));
-  }
-  finish('循环依赖守卫', failures,
-    `${parsed.length}/${rels.length} 个文件已解析，${modules.size} 个模块 / ${edgeCount} 条静态依赖边，循环 ${cycles.length} 组`);
+  emit({
+    guard: 'cycles',
+    coverage: {
+      planned: rels.length,
+      scanned: parsed.length,
+      modules: modules.size,
+      edges: [...edges.values()].reduce((sum, targets) => sum + targets.length, 0),
+    },
+    parseFailures,
+    unsupported: unresolvedStaticImports.map(({ source, specifier }) => ({
+      path: source, message: `cannot resolve static import ${specifier}`,
+    })),
+    findings: findCycles(edges).map((members) => ({
+      rule: 'cycle',
+      key: members.join(' <-> '),
+      path: members[0],
+      line: 1,
+      message: `these modules import each other in a cycle: ${members.join(' <-> ')}`,
+    })),
+  });
 }
 
 main();

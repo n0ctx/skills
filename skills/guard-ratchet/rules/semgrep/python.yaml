@@ -1,0 +1,287 @@
+rules:
+  # ---------------------------------------------------------------- stability
+  - id: gr.py.unbounded-retry
+    languages: [python]
+    severity: ERROR
+    message: >-
+      `while True` around try/except with no break, return or raise retries forever and never surfaces a persistent failure.
+      Bound the attempts and re-raise after the last one.
+    metadata:
+      category: stability
+      # Intentional daemon/worker loops (queue consumers, pollers) look identical.
+      confidence: MEDIUM
+      guard-tier: fast
+    patterns:
+      - pattern: |
+          while True:
+              $...BODY
+      # Body has try/except and never mentions break/return/raise/exit anywhere (nested included).
+      - metavariable-regex:
+          metavariable: $...BODY
+          regex: '^(?=[\s\S]*\btry\s*:[\s\S]*\bexcept\b)(?![\s\S]*\b(break|return|raise|exit)\b)'
+
+  - id: gr.py.swallowed-exception
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A broad `except` whose body is only pass, `...` or continue silently swallows every error.
+      Catch a specific exception, or log and re-raise.
+    metadata:
+      category: stability
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      # The swallowing handler may be 1st, 2nd or 3rd; patterns cannot say "any handler".
+      - pattern-either:
+          - pattern: |
+              try:
+                  ...
+              except:
+                  $S
+          - pattern: |
+              try:
+                  ...
+              except ...:
+                  ...
+              except:
+                  $S
+          - pattern: |
+              try:
+                  ...
+              except ...:
+                  ...
+              except ...:
+                  ...
+              except:
+                  $S
+          - patterns:
+              - pattern-either:
+                  - pattern: |
+                      try:
+                          ...
+                      except $T:
+                          $S
+                  - pattern: |
+                      try:
+                          ...
+                      except $T as $E:
+                          $S
+                  - pattern: |
+                      try:
+                          ...
+                      except ...:
+                          ...
+                      except $T:
+                          $S
+                  - pattern: |
+                      try:
+                          ...
+                      except ...:
+                          ...
+                      except $T as $E:
+                          $S
+                  - pattern: |
+                      try:
+                          ...
+                      except ...:
+                          ...
+                      except ...:
+                          ...
+                      except $T:
+                          $S
+                  - pattern: |
+                      try:
+                          ...
+                      except ...:
+                          ...
+                      except ...:
+                          ...
+                      except $T as $E:
+                          $S
+              - metavariable-regex:
+                  metavariable: $T
+                  regex: '^(Exception|BaseException|builtins\.Exception|builtins\.BaseException)$'
+      - metavariable-regex:
+          metavariable: $S
+          regex: '^(pass|\.\.\.|continue)$'
+
+  - id: gr.py.requests-without-timeout
+    languages: [python]
+    severity: WARNING
+    message: >-
+      requests has no default timeout, so a call without `timeout=` (or with `timeout=None`) can hang forever.
+      Pass a finite timeout, e.g. `timeout=10`.
+    metadata:
+      category: stability
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: requests.$M(...)
+              - pattern-not: requests.$M(..., timeout=$T, ...)
+              # **kwargs may carry the timeout; stay silent rather than guess.
+              - pattern-not: requests.$M(..., **$KW)
+          - pattern: requests.$M(..., timeout=None, ...)
+          # httpx defaults to a 5s timeout, so only an explicit None is a hang risk.
+          - pattern: httpx.$M(..., timeout=None, ...)
+      - metavariable-regex:
+          metavariable: $M
+          regex: '^(get|post|put|patch|delete|head|request)$'
+
+  - id: gr.py.blocking-sleep-in-async
+    languages: [python]
+    severity: ERROR
+    message: >-
+      time.sleep() inside `async def` blocks the whole event loop.
+      Use `await asyncio.sleep(...)` instead.
+    metadata:
+      category: stability
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      - pattern: time.sleep(...)
+      - pattern-inside: |
+          async def $F(...):
+              ...
+      # A plain def nested in the coroutine (run via to_thread / executor) is fine.
+      - pattern-not-inside:
+          patterns:
+            - pattern: |
+                def $G(...):
+                    ...
+            - pattern-not: |
+                async def $G(...):
+                    ...
+            - pattern-inside: |
+                async def $F(...):
+                    ...
+
+  # ----------------------------------------------------------------- security
+  - id: gr.py.subprocess-shell-injection
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Building a shell command from an f-string, %-format, .format() or concatenation allows command injection.
+      Pass an argument list without shell=True, or wrap every dynamic part in shlex.quote().
+    metadata:
+      category: security
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.$F($CMD, ..., shell=True, ...)
+          - pattern: os.system($CMD)
+          - pattern: os.popen($CMD)
+      - metavariable-pattern:
+          metavariable: $CMD
+          patterns:
+            - pattern-either:
+                - pattern: |
+                    f"...{$X}..."
+                - pattern: |
+                    "..." % $X
+                - pattern: |
+                    "...".format(...)
+                - pattern: $A + $B
+            - pattern-not: |
+                "..." + "..."
+      # Literal-only concatenation is not injectable; neither is anything routed through shlex.quote().
+      - metavariable-regex:
+          metavariable: $CMD
+          regex: '^(?![\s\S]*\bquote\()(?!\s*[rRuU]?("[^"\n]*"|''[^''\n]*'')(\s*\+\s*[rRuU]?("[^"\n]*"|''[^''\n]*''))*\s*$)'
+
+  - id: gr.py.sql-string-build
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Building SQL with an f-string, %-format, .format() or concatenation allows SQL injection.
+      Pass values as bound parameters: `cursor.execute("... WHERE id = %s", (value,))`.
+    metadata:
+      category: security
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      - pattern-either:
+          - pattern: $DB.$M($SQL, ...)
+          - pattern: $DB.$M(text($SQL), ...)
+      - metavariable-regex:
+          metavariable: $M
+          regex: '^(execute|executemany)$'
+      - metavariable-pattern:
+          metavariable: $SQL
+          patterns:
+            - pattern-either:
+                - pattern: |
+                    f"...{$X}..."
+                - pattern: |
+                    "..." % $X
+                - pattern: |
+                    "...".format(...)
+                - pattern: $A + $B
+            - pattern-not: |
+                "..." + "..."
+      # Must look like a SQL statement (keeps unrelated `.execute()` APIs out) and not be literals only.
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: '(?is)^(?!\s*[rRuU]?("[^"\n]*"|''[^''\n]*'')(\s*\+\s*[rRuU]?("[^"\n]*"|''[^''\n]*''))*\s*$)(?=.*\b(select\b.+\bfrom|insert\s+into|update\b.+\bset|delete\s+from|drop\s+(table|database|index|view|schema)|alter\s+table|create\s+(table|index|view|database)|truncate\s+table|replace\s+into|pragma\s+\w+)\b)'
+
+  - id: gr.py.unsafe-deserialization
+    languages: [python]
+    severity: ERROR
+    message: >-
+      pickle, marshal and yaml's unsafe loaders execute arbitrary code embedded in the data.
+      Use json, or yaml.safe_load / `Loader=yaml.SafeLoader`, for anything not fully trusted.
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+      guard-tier: fast
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+      - pattern: marshal.load(...)
+      - pattern: marshal.loads(...)
+      - pattern: yaml.unsafe_load(...)
+      - pattern: yaml.unsafe_load_all(...)
+      # No Loader at all (PyYAML < 6 defaults to the unsafe Loader).
+      - patterns:
+          - pattern: yaml.$FN($X)
+          - metavariable-regex:
+              metavariable: $FN
+              regex: '^(load|load_all)$'
+      # Explicitly unsafe Loader, keyword or positional.
+      - patterns:
+          - pattern-either:
+              - pattern: yaml.$FN($X, ..., Loader=$L, ...)
+              - pattern: yaml.$FN($X, $L)
+          - metavariable-regex:
+              metavariable: $FN
+              regex: '^(load|load_all)$'
+          - metavariable-regex:
+              metavariable: $L
+              regex: '^(yaml\.(Loader|UnsafeLoader|CLoader|CUnsafeLoader)|UnsafeLoader|CUnsafeLoader)$'
+
+  - id: gr.py.tls-verify-disabled
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Disabling TLS certificate verification exposes the connection to man-in-the-middle attacks.
+      Remove `verify=False` and, for a private CA, pass `verify="/path/to/ca.pem"` instead.
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+      guard-tier: fast
+    pattern-either:
+      - pattern: requests.$M(..., verify=False, ...)
+      - pattern: httpx.$M(..., verify=False, ...)
+      # `session.verify = False`; the name filter keeps unrelated `self.verify = False` flags out.
+      - patterns:
+          - pattern: $S.verify = False
+          - metavariable-regex:
+              metavariable: $S
+              regex: '(?i)(^|\.)(\w*session\w*|\w*client\w*|sess|s|requests)$'
+      - pattern: ssl._create_unverified_context

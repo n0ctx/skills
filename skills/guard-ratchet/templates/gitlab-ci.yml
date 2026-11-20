@@ -1,0 +1,29 @@
+# guard-ratchet for GitLab CI. Merge into .gitlab-ci.yml, install the project's dependencies and the
+# guard tools at pinned versions, and require the pipeline to pass before merge. Protect guards/,
+# tools/guard/ and .gitlab-ci.yml with CODEOWNERS and "code owner approval". See references/trust-model.md.
+guards:
+  image: python:3.12
+  variables:
+    GIT_DEPTH: 0  # the runner needs the merge-base with the target branch
+    RUNNER_DIR: tools/guard  # the policy's "runner" setting
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    # project dependencies and pinned guard tools go here; pin guard tools in this file or take the
+    # pins from the target branch, because tools from the merge request's own lockfile can be swapped by it
+    - BASE_REF="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_DEFAULT_BRANCH}"
+    - git fetch origin "$BASE_REF"
+    - |
+      if [ -n "$CI_MERGE_REQUEST_IID" ]; then
+        python3 "$RUNNER_DIR/guard.py" check --base "origin/$BASE_REF"
+        if git cat-file -e "origin/$BASE_REF:$RUNNER_DIR/guard.py" 2>/dev/null; then
+          mkdir -p /tmp/base-guard
+          git archive "origin/$BASE_REF" "$RUNNER_DIR" | tar -x -C /tmp/base-guard
+          python3 "/tmp/base-guard/$RUNNER_DIR/guard.py" check --trusted --root . --base "origin/$BASE_REF"
+        else
+          echo "the target branch has no guards yet: this merge request introduces them and needs a full review"
+        fi
+      else
+        python3 "$RUNNER_DIR/guard.py" check --full --base "origin/$BASE_REF"
+      fi

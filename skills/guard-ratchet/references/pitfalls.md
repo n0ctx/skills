@@ -1,93 +1,73 @@
-# 落地时的坑
+# Pitfalls
 
-都是真实落地中遇到过的，每条给出症状和处理办法。SKILL.md 正文已经写明的要求（key 不用行号、从干净提交生成基线、不动别人的工作区、统一入口、说明文件受版本控制等）不在这里重复。
+Problems met in real deployments, with the symptom and the fix. Rules already stated in SKILL.md or the contracts are not repeated here.
 
-## 基线相关
+## Baselines
 
-**生成基线后 HEAD 又前进了**
-症状：从干净提交生成的基线，提交时已经落后于别人新推上来的改动，一提交就报新增或虚挂。
-处理：提交前确认 HEAD 没变；变了就按同样方法重新生成一次。
+**The base moved after the baselines were written.** Baselines derived from an old base report new or stale entries as soon as the change is rebased. Run `guard.py update` again after rebasing, then commit.
 
-**指标定义改了，整体重建基线**
-症状：修正指标的计算方式后直接 `--update-baseline`，没有虚挂检查的守卫（例如体量）顺带把很久以来的增长全部认下，原本该失败的文件变成通过。
-处理：只重算定义变了的那几项，取旧值与新值中较小者，其余指标沿用旧基线；汇报里说明哪些失败是因为指标修正而消失的。
+**A metric definition changed and the whole baseline was regenerated from the working tree.** Every regression since the last baseline gets accepted at once. Change definitions through the policy, so the fingerprint changes, then run `update --rules-changed`. It rebuilds from the base commit and stops on entries the new definition no longer sees.
 
-**守卫上线后基线和代码一起走样**
-症状：其他人或其他 agent 会话在守卫上线后继续大量改代码，没人跑守卫；一段时间后几乎每个守卫都同时报新增和虚挂，分不清哪些该修。
-处理：说明文件里写明「改完代码跑统一入口」；把统一入口接进 CI 或提交前检查；汇报时提醒用户告知其他正在改代码的人。
+**Guards went live, then nobody ran them.** After a few weeks every guard reports new and stale entries together, and nobody can tell which matter. Wire the check into the lint entry point and CI from the first day, and write the agent instructions into the repository's instruction file.
 
-## 扫描范围相关
+**A guard's command has no `{root}`.** The baseline cannot be derived from the base commit, so `update` refuses with an integrity problem. Make the tool scan `{root}`, or `cd {root}` first.
 
-**扫描空转或只扫到一部分，仍然通过**
-症状：路径写错、目录改名或解析逻辑坏了一半，扫描量从 10000 个函数掉到 5000 个甚至 0，发现变少，检查反而通过。
-处理：按 `detector-contract.md` 第 2、3 节做健康检查：计划扫描数与解析成功数一致，关键实体数设下限。
+## Scope
 
-**被版本控制忽略、但本地存在的目录**
-症状：本地和 CI 结果不同；在干净检出上死代码守卫报虚挂。
-处理：二选一并在汇报里说明：只扫受版本控制的文件（`git ls-files`），或者沿用仓库已有守卫的做法。同一仓库里的守卫做法一致。
+**A scan silently covers less.** A path typo, a renamed directory or a broken glob drops half the files, and the findings shrink with them, which reads as an improvement. The runner fails a run more than 5% below the baseline's scan size, and fails an empty scan outright, but only for guards that report a scan size: detector JSON, lizard, JUnit, coverage and mutation reports, the built-ins, and SARIF tools that list their artifacts. Compiler-style text (tsc, mypy, gcc) and SARIF without artifacts say nothing about what they covered; an empty SARIF `runs` array or a run without `results` is still an integrity failure. For those tools, keep the scanned paths in the command (`.`/`{root}`, not a glob) so they cannot shrink unnoticed. The 5% tolerance applies per change, so a slow decline over many changes shows only in the history of the baselines' `scanned` field.
 
-**解析时打开了注释或 token，遍历把它们当成语法节点**
-症状：为了读标记打开 espree 的 `comment: true`（或为查重打开 `tokens: true`），通用遍历函数顺着 `comments` / `tokens` 数组走进去，注释被当成「这一行开头的节点」，token 的 `type: 'Identifier'` 被当成标识符。
-处理：遍历时跳过 `comments`、`tokens` 两个键（以及 `loc`、`range`、`parent`）。所有自带遍历的守卫都要改，不只是公共模块里那一个。
+**Old reports from an incremental build.** A build tool that skips an up-to-date test task leaves the previous run's JUnit XML in place. Report files older than the run are ignored, and a run that wrote none is an integrity failure, so force the task to run (`gradle test --rerun-tasks`, a clean output directory) in the guard command.
 
-**夹具只证明了棘轮，没有证明检测器**
-症状：基线一致、新增、虚挂都测了，但检测器漏扫或误扫时这些用例仍然通过。
-处理：按 `detector-contract.md` 第 6 节另测正例、反例、边界、key 稳定、解析失败和覆盖失败。
+**A new sub-project fails only in the trusted run.** Its own lint or type configuration is a rule change, which the trusted run does not apply until it reaches the base branch. Merge the configuration on its own first. Dependency and version edits in `pyproject.toml`, `package.json` and `Cargo.toml` are not rule changes; other edits to those files are.
 
-## 指标与 key 相关
+**Files ignored by git but present locally.** Local and CI results differ, and a clean checkout reports stale entries. Built-in guards use `git ls-files` (tracked plus untracked-not-ignored), and tools should be pointed at the same set. The runner directory and the paths in `exclude` are never scanned.
 
-**体量指标把内联回调和测试容器当成函数**
-症状：抽出几个小函数、把循环改成 `map`，文件更短了，「定义数」却暴涨；测试文件加三个用例，整个 `describe` 块作为「最大函数」超标。
-处理：定义数只数有名字的函数和类；测试文件里 `test`/`describe` 等的回调不算函数（见 `guard-catalog.md` 第 2 节）。
+**Tool output paths do not match repository paths.** A tool run with `cd {root}` reports relative paths; one run from the root against `{root}` reports absolute temporary paths. The adapters normalize both. A path outside the repository (an installed dependency) is dropped rather than keyed.
 
-**圈复杂度 key 按全文件编号匿名函数**
-症状：在文件前面加一个箭头函数，后面所有 `(匿名)~n` 的 key 整体后移，基线出现一对「新增 + 虚挂」，数值却没变。
-处理：匿名函数写成「外层函数名>调用名」，只在同一外层函数内同名时才加编号（见 `guard-catalog.md` 第 1 节）。
+**Coverage reports that omit untested files.** coverage.py without `source=`/`--cov=`, Vitest without `--coverage.all`, c8 without `--all`. A changed file missing from the report is reported as `unmeasured` instead of passing.
 
-## 死代码 / 引用图相关
+**Walking parser comments or tokens as syntax nodes.** With espree `comment: true` or `tokens: true`, a generic walker enters `comments`/`tokens` and treats them as nodes. Skip `comments`, `tokens`, `loc`, `range` and `parent` in every walker, not only the shared one.
 
-**约定式加载导致大量误报**
-症状：配置文件、按目录加载的插件、测试里用字符串路径加载的模块全被报成死代码。
-处理：第一步就列清入口和加载约定。字面量路径的约定（例如 `freshImport('backend/x.js')`）加进识别列表；变量路径不要猜，进基线并在汇报里说明。
+## Keys and metrics
 
-**静态 import 解析失败被当作不存在**
-症状：源码里的字面量仓内 import 目标拼错或解析失败，依赖图直接丢掉这条边。
-处理：确定性的静态引用无法解析时，列进健康检查结果，不静默删边。
+**Line numbers or file-wide ordinals in keys.** One inserted line renumbers everything below it into new + stale pairs. Use `path#symbol`, `outer>call` for anonymous functions, and `~2` only for real same-name collisions.
 
-**动态加载的模块对象被当成「全部导出都用到」**
-症状：测试里 `const { upsert } = await freshImport('x.js')` 或 `const mod = await freshImport(suite.path); mod[suite.getName]`，守卫把 x.js 的全部导出都记为在用，没人调用的查询躲过检查；改成按成员算后，一次冒出二十多条真死代码。
-处理：按解构键、点号、字符串下标，以及对象字面量里同名属性的字符串值确定用到的导出（见 `guard-catalog.md` 第 4 节）；只有模块对象逃逸时才退回全部。
+**Definitions-per-file and length metrics that count inline callbacks.** Extracting small named functions or switching a loop to `map` inflates the number while the file gets shorter. Count only named functions and classes, and treat `describe`/`it` callbacks as containers, not functions. The default policy has no definitions metric at all.
 
-**新建目录绕过架构边界**
-症状：新建 `misc/`、`temp-core/` 等目录后，代码不再落入已有架构区域，禁止依赖规则失去覆盖。
-处理：边界定义完整的仓库，加上未归类模块检查（见 `guard-catalog.md` 8.5 节）。
+**One threshold for every kind of code.** JSX views and table-driven tests hit length and branch limits that are meant for business logic. Classify the code (`paths`) instead of raising the logic limit for everyone.
 
-**deep import 绕过模块 API**
-症状：调用方绕过 `index.js` 等公开入口，直接导入其他模块的 `internal/`、`private/` 或 `src/` 文件。
-处理：先确认模块公开入口和私有目录约定，再禁止跨模块 deep import。
+## Dead code and reference graphs
 
-## 测试形态相关
+**Convention-loaded files reported as dead.** Plugins loaded by directory, framework routes, tool config files and modules loaded by test helpers through string paths. Declare them as entry points, and check the list against the exports it names, so stale entries fail.
 
-**默认测试命令「看起来」排除了端到端目录，实际没有**
-症状：glob 写法被 shell 或测试运行器以不同方式展开。
-处理：用一个临时小目录（只放几个空测试）真的跑一次测试运行器，确认哪些文件被收集。
+**A module loaded dynamically counts all its exports as used.** `const { a } = await load('x')` makes every export of `x` look used and hides real dead code. Count used exports from destructuring, member access and string subscripts; fall back to "all used" only when the module object escapes.
 
-**固定等待改成轮询时引入竞态**
-处理：先读被测代码，确认轮询的条件在断言依赖的副作用之后才成立（例如「活跃流清空」发生在「消息已落库」之后）。
+**Unresolved static imports dropped from the graph.** A typo in a literal import path silently removes an edge. Report it as unsupported input.
 
-**自定义断言辅助被判成「没有断言」**
-处理：把仓库的断言辅助函数名加进识别列表，不放宽规则。
+## Tests
 
-## N+1 相关
+**A test command that "looks" like it excludes a directory.** Shells and test runners expand globs differently. Run the runner on a small temporary directory and look at what it collected, or rely on the JUnit inventory, which shows exactly what ran.
 
-**把查询目录里的所有导出都当成查询**
-症状：一个只做数字规整的纯函数放在查询目录里，被业务层在循环里调用，报成 N+1。
-处理：确认导出真的访问数据库才算查询（见 `guard-catalog.md` 第 6 节）。
+**Replacing a fixed sleep with polling introduced a race.** Read the code under test and make sure the polled condition becomes true only after the side effect the assertion needs.
 
-**事务内的批量写被报成 N+1**
-症状：排序写回、导入插入这类「事务里复用预编译语句逐条 run」的代码占了运行形态基线的一半，真正的逐项查询被淹没。
-处理：事务内对预编译语句的逐条写入不报，逐条读照报。
+**A custom assertion helper reported as "no assertion".** Add the helper's name to the detector's assertion list; do not weaken the rule.
 
-**只识别了原始的 prepare/execute**
-症状：守卫只抓到查询层内部的循环写入（排序写回、迁移），业务层真正的逐项查询一条没抓到。
-处理：按 import 来源识别「来自查询层的函数」，并把 `map`/`filter`/推导式等逐项回调也当作循环体。
+**A local rename with edits looks like a deletion.** Before a commit, git pairs an untracked file with a deleted one only when the content is identical. A plain `mv` followed by edits therefore shows up as a removed file plus a new one: baseline entries go `stale` and the new file's findings are `new`. Use `git mv`, or commit the rename on its own first, and run `guard.py update`.
+
+**Renamed tests cost an exception.** The inventory cannot tell a rename from a deletion plus an addition. That is deliberate: silent deletion is the failure this guard exists for. Write one exception per renamed group (`--key 'tests/test_api.py::*'`) with the reason.
+
+## N+1 and runtime shape
+
+**Every export of a query directory treated as a query.** A pure helper in `db/` called in a loop is reported as N+1. A function counts as a query only with evidence: it uses the connection, calls `prepare`/`exec`/`transaction`, or calls another query function. Ordinary modules outside the query layer never inherit the effect.
+
+**Batch writes in a transaction reported as N+1.** Reusing a prepared statement inside a transaction callback is the recommended batch pattern for synchronous drivers. Report reads in loops, not those writes.
+
+**Only `prepare`/`execute` in the same file recognized.** That misses the real cases, where business code calls query-layer functions in a loop. Resolve calls through imports, and treat `map`/`filter`/comprehension callbacks as loop bodies, but not the loop header, which runs once.
+
+## Security tools
+
+**Registry rule packs fetched at run time.** Semgrep `--config p/…` downloads the current pack, so findings change without any code change. Vendor the pack at a fixed version.
+
+**New advisories for unchanged dependencies.** osv-scanner results change when the database does, so a run on an unrelated change can fail. Run it with `when: ["deps"]` on changes and with `check --full` on a schedule, and handle scheduled findings as maintenance, not as regressions of whoever pushed next.
+
+**Test fixtures with fake credentials.** The built-in skips obvious placeholders. For realistic-looking test keys, record an exception for that key, or generate the value at test time.

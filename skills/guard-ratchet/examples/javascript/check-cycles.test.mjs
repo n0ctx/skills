@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { useGuardFixture } from './guard-fixture.mjs';
+import { useGuardFixture, ruleKeys } from './guard-fixture.mjs';
 
-const { makeRoot, write, run } = useGuardFixture('check-cycles.mjs');
+const { makeRoot, write, scan } = useGuardFixture('check-cycles.mjs');
 
 function fixture() {
   const root = makeRoot();
@@ -13,33 +13,72 @@ function fixture() {
   return root;
 }
 
-test('没有循环时通过，import() 与测试文件不算循环', () => {
-  const result = run(fixture());
-  assert.equal(result.status, 0, result.stderr);
+test('no static cycle: import() and test files do not form one, and coverage counts modules and edges', () => {
+  const { status, doc } = scan(fixture());
+  assert.equal(status, 0);
+  assert.deepEqual(doc.findings, []);
+  assert.deepEqual(doc.coverage, { planned: 2, scanned: 2, unit: 'files', modules: 2, edges: 1 });
 });
 
-test('静态 import 成环时失败', () => {
+test('a static import cycle is one finding keyed by its sorted members', () => {
   const root = fixture();
   write(root, 'backend/b.js', "import { a } from './a.js';\nexport const b = 1;\nexport const c = () => a;\n");
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /backend\/a\.js ↔ backend\/b\.js/);
+  const { status, doc } = scan(root);
+  assert.equal(status, 0);
+  assert.deepEqual(ruleKeys(doc.findings), ['cycle:backend/a.js <-> backend/b.js']);
+  assert.equal(doc.findings[0].count, 1);
+  assert.equal(doc.findings[0].path, 'backend/a.js');
 });
 
-test('解析失败、无法解析的静态引用、空扫描都失败', () => {
-  const parseRoot = makeRoot();
-  write(parseRoot, 'backend/bad.js', 'export const = ;\n');
-  const parseFailure = run(parseRoot);
-  assert.equal(parseFailure.status, 1);
-  assert.match(parseFailure.stderr, /解析失败：backend\/bad\.js/);
+test('require and export-from edges close cycles too; a three-member cycle is one finding', () => {
+  const root = makeRoot();
+  write(root, 'src/c.js', "export { b } from './b.js';\nexport const c = 1;\n");
+  write(root, 'src/b.js', "const a = require('./a.js');\nexport const b = a;\n");
+  write(root, 'src/a.js', "import { c } from './c.js';\nexport const a = c;\n");
+  const { doc } = scan(root);
+  assert.deepEqual(ruleKeys(doc.findings), ['cycle:src/a.js <-> src/b.js <-> src/c.js']);
+});
 
-  const importRoot = makeRoot();
-  write(importRoot, 'backend/a.js', "import './missing.js';\n");
-  const unresolved = run(importRoot);
-  assert.equal(unresolved.status, 1);
-  assert.match(unresolved.stderr, /无法解析仓内静态引用：backend\/a\.js -> \.\/missing\.js/);
+test('two independent cycles are two findings, sorted by key', () => {
+  const root = makeRoot();
+  write(root, 'x/p.js', "import './q.js';\n");
+  write(root, 'x/q.js', "import './p.js';\n");
+  write(root, 'a/m.js', "import './n.js';\n");
+  write(root, 'a/n.js', "import './m.js';\n");
+  const { doc } = scan(root);
+  assert.deepEqual(ruleKeys(doc.findings), ['cycle:a/m.js <-> a/n.js', 'cycle:x/p.js <-> x/q.js']);
+});
 
-  const empty = run(makeRoot());
-  assert.equal(empty.status, 1);
-  assert.match(empty.stderr, /没有扫到任何文件/);
+test('inserting unrelated code and files does not change a cycle key', () => {
+  const root = makeRoot();
+  write(root, 'backend/a.js', "import { b } from './b.js';\nexport const a = b;\n");
+  write(root, 'backend/b.js', "import { a } from './a.js';\nexport const b = a;\n");
+  const before = ruleKeys(scan(root).doc.findings);
+  write(root, 'backend/a.js', "// unrelated\nconst noise = 1;\nimport { b } from './b.js';\nexport const a = b + noise;\n");
+  write(root, 'backend/zzz.js', 'export const z = 1;\n');
+  assert.deepEqual(ruleKeys(scan(root).doc.findings), before);
+});
+
+test('an unresolvable static import lands in unsupported', () => {
+  const root = makeRoot();
+  write(root, 'backend/a.js', "import './missing.js';\n");
+  const { status, doc } = scan(root);
+  assert.equal(status, 0);
+  assert.deepEqual(doc.unsupported, [{ path: 'backend/a.js', message: 'cannot resolve static import ./missing.js' }]);
+});
+
+test('a file that does not parse lands in parse_failures', () => {
+  const root = makeRoot();
+  write(root, 'backend/bad.js', 'export const = ;\n');
+  write(root, 'backend/ok.js', 'export const ok = 1;\n');
+  const { doc } = scan(root);
+  assert.deepEqual(doc.parse_failures, ['backend/bad.js']);
+  assert.equal(doc.coverage.planned, 2);
+  assert.equal(doc.coverage.scanned, 1);
+});
+
+test('an empty scan reports planned 0', () => {
+  const { status, doc } = scan(makeRoot());
+  assert.equal(status, 0);
+  assert.deepEqual(doc.coverage, { planned: 0, scanned: 0, unit: 'files', modules: 0, edges: 0 });
 });

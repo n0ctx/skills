@@ -1,26 +1,31 @@
 /**
- * 仓库内模块引用关系图，供 check-dead-code / check-cycles 使用
+ * In-repository module reference graph, used by check-dead-code / check-cycles / check-architecture
+ * and api-surface.
  *
- * 引用来源：import / export from、require('…')、import('…') 的字符串字面量（含 React.lazy），
- * 以及测试辅助 freshImport('仓库根相对路径')。相对路径解析到实际文件
- * （补 .js/.jsx/.mjs/.cjs，目录补 index）。import() 的参数是表达式时，只认其中
- * 形如仓库根相对路径的字符串字面量（例如 import(pathToFileURL(path.resolve(ROOT, 'backend/x.js')).href)）；
- * freshImport(suite.path) 这种按对象属性取路径的，认本文件里所有 `path: '仓库路径'` 属性值。其余不猜。
+ * Reference sources: the string literals of import / export from, require('...') and import('...')
+ * (including React.lazy), plus the test helper freshImport('repo-root-relative path'). Relative paths
+ * resolve to actual files (.js/.jsx/.mjs/.cjs appended, directories get index). When the argument of
+ * import() is an expression, only string literals in it that look like repo-root-relative paths are
+ * recognised (for example import(pathToFileURL(path.resolve(ROOT, 'backend/x.js')).href)); for
+ * freshImport(suite.path), which takes its path from an object property, every `path: 'repo path'`
+ * property value in the same file is recognised. Nothing else is guessed.
  *
- * import() / freshImport 加载到的模块对象，按用法确定用到了哪些导出：
- *   const { a, b } = await freshImport('x')   → a、b
- *   const mod = await import('x'); mod.a      → a
- *   mod['a']                                  → a
- *   mod[suite.createName]                     → 本文件里所有 `createName: '…'` 属性的字符串值
- * 模块对象被传给函数、展开、或下标取不到对应属性值时，按全部导出都用到处理。
- * bare package specifier 按外部依赖处理；仓库若使用路径别名，落地前必须按仓库约定补充解析。
+ * For a module object loaded by import() / freshImport, usage decides which exports are used:
+ *   const { a, b } = await freshImport('x')   -> a, b
+ *   const mod = await import('x'); mod.a      -> a
+ *   mod['a']                                  -> a
+ *   mod[suite.createName]                     -> the string values of every `createName: '...'` property in the file
+ * When the module object is passed to a function, spread, or indexed with a key that has no matching
+ * property value, every export counts as used.
+ * A bare package specifier is an external dependency; if the repository uses path aliases, add their
+ * resolution per the repository's conventions before deploying.
  */
 
 import path from 'node:path';
 import { CODE_SUFFIXES, parseFiles, patternNames, stringValue, walk } from './guard-common.mjs';
 
 export const ALL = '*';
-// backend/tests/helpers/test-env.js 里按仓库根相对路径动态加载模块的函数
+// Functions in backend/tests/helpers/test-env.js that load modules dynamically by repo-root-relative path
 const ROOT_IMPORTERS = new Set(['freshImport', 'freshImportUncached']);
 
 export function resolveFile(fileSet, base) {
@@ -49,9 +54,15 @@ function importNames(node) {
 const relative = (rel, spec) => (typeof spec === 'string' && spec.startsWith('.')
   ? path.posix.join(path.posix.dirname(rel), spec) : null);
 
+// Resolve a relative specifier to a file in fileSet; null for a bare package or when nothing resolves
+export function resolveSpecifier(fileSet, rel, spec) {
+  const base = relative(rel, spec);
+  return base && resolveFile(fileSet, base);
+}
+
 const CODE_PATH_RE = /^[\w.-]+(\/[\w.-]+)+\.(js|jsx|mjs|cjs)$/;
 
-// import() 参数是表达式时，其中像仓库根相对路径的字符串字面量
+// When the import() argument is an expression: its string literals that look like repo-root-relative paths
 function embeddedPaths(source) {
   return [...walk(source)].map(([n]) => stringValue(n)).filter((v) => v && CODE_PATH_RE.test(v));
 }
@@ -62,7 +73,7 @@ function parentMap(tree) {
   return parents;
 }
 
-// 本文件里 `key: '字符串'` 形式的属性值；一个都没有时返回 null
+// Values of `key: 'string'` properties in this file; null when there are none
 function propertyStrings(tree, key) {
   const values = [];
   for (const [node] of walk(tree)) {
@@ -73,7 +84,7 @@ function propertyStrings(tree, key) {
   return values.length ? values : null;
 }
 
-// mod[key] 里 key 能对应到的导出名；认不出返回 null
+// Export names that the key in mod[key] can stand for; null when unrecognised
 function computedNames(tree, key) {
   const literal = stringValue(key);
   if (literal !== null) return [literal];
@@ -92,7 +103,7 @@ function patternKeys(pattern, tree) {
   return names;
 }
 
-// 名为 name 的模块对象在本文件里被取用的导出名
+// Export names taken from the module object called `name` in this file
 function memberNames(tree, parents, name) {
   const names = new Set();
   for (const [node, parent] of walk(tree)) {
@@ -115,7 +126,7 @@ function memberNames(tree, parents, name) {
   return [...names];
 }
 
-// 动态加载结果被怎样接住，决定用到哪些导出
+// How a dynamic-load result is captured decides which exports are used
 function loadedNames(tree, parents, loadNode) {
   let node = loadNode;
   let parent = parents.get(node);
@@ -133,7 +144,7 @@ function loadedNames(tree, parents, loadNode) {
   return [ALL];
 }
 
-// freshImport 的参数：字面量路径，或 suite.path 这种按属性名取的仓库路径
+// freshImport argument: a literal path, or a repo path taken by property name such as suite.path
 function rootImportTargets(tree, arg) {
   const literal = stringValue(arg);
   if (literal !== null) return [literal];
@@ -143,52 +154,56 @@ function rootImportTargets(tree, arg) {
   return [];
 }
 
-// 返回 { refs: [{ base, names, lazy }], exports: [{ name, line }] }；base 是待解析的仓库相对路径，
-// lazy 表示运行到这里才加载（import() / freshImport），不构成加载期的循环
+// Returns { refs: [{ base, names, lazy, specifier, line }], exports: [{ name, line }] }; base is the
+// repo-relative path to resolve, lazy means the module loads only when execution gets there
+// (import() / freshImport) and so is not a load-time cycle
 function moduleShape(rel, tree) {
   const refs = [];
   const exports = [];
-  const ref = (base, names, lazy = false, specifier = base) => refs.push({ base, names, lazy, specifier });
+  const ref = (node, base, names, lazy = false, specifier = base) => refs.push({
+    base, names, lazy, specifier, line: node.loc.start.line,
+  });
   const exported = (node, names) => names.forEach((name) => exports.push({ name, line: node.loc.start.line }));
   const parents = parentMap(tree);
   for (const [node] of walk(tree)) {
     if (node.type === 'ImportDeclaration') {
       const specifier = node.source.value;
-      ref(relative(rel, specifier), importNames(node), false, specifier);
+      ref(node, relative(rel, specifier), importNames(node), false, specifier);
     }
     else if (node.type === 'ExportNamedDeclaration') {
       if (node.declaration) exported(node, declarationNames(node.declaration));
       exported(node, node.specifiers.map((s) => moduleName(s.exported)));
       if (node.source) {
         const specifier = node.source.value;
-        ref(relative(rel, specifier), node.specifiers.map((s) => moduleName(s.local)), false, specifier);
+        ref(node, relative(rel, specifier), node.specifiers.map((s) => moduleName(s.local)), false, specifier);
       }
     } else if (node.type === 'ExportAllDeclaration') {
       const specifier = node.source.value;
-      ref(relative(rel, specifier), [ALL], false, specifier);
+      ref(node, relative(rel, specifier), [ALL], false, specifier);
       if (node.exported) exported(node, [moduleName(node.exported)]);
     } else if (node.type === 'ExportDefaultDeclaration') exported(node, ['default']);
     else if (node.type === 'ImportExpression') {
       const literal = stringValue(node.source);
       const names = loadedNames(tree, parents, node);
-      if (literal !== null) ref(relative(rel, literal), names, true, literal);
-      else embeddedPaths(node.source).forEach((base) => ref(base, names, true, base));
+      if (literal !== null) ref(node, relative(rel, literal), names, true, literal);
+      else embeddedPaths(node.source).forEach((base) => ref(node, base, names, true, base));
     } else if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.arguments.length === 1) {
       if (node.callee.name === 'require') {
         const specifier = stringValue(node.arguments[0]);
-        ref(relative(rel, specifier), [ALL], false, specifier);
+        ref(node, relative(rel, specifier), [ALL], false, specifier);
       }
       else if (ROOT_IMPORTERS.has(node.callee.name)) {
         const names = loadedNames(tree, parents, node);
-        rootImportTargets(tree, node.arguments[0]).forEach((base) => ref(base, names, true, base));
+        rootImportTargets(tree, node.arguments[0]).forEach((base) => ref(node, base, names, true, base));
       }
     }
   }
   return { refs, exports };
 }
 
-// 返回已解析模块和 unresolvedStaticImports；后者列出无法解析的确定性仓内引用。
-// scan 可传入同一批文件的 parseFiles 结果，供已有 detector 复用解析结果。
+// Returns the resolved modules and unresolvedStaticImports, which lists deterministic in-repo
+// references that cannot be resolved. scan may carry the parseFiles result for the same files so an
+// existing detector can reuse its parse.
 export function buildImportGraph(root, rels, scan = null) {
   const fileSet = new Set(rels);
   const { parsed, parseFailures } = scan ?? parseFiles(root, rels);
@@ -197,13 +212,13 @@ export function buildImportGraph(root, rels, scan = null) {
   for (const { rel, tree } of parsed) {
     const { refs, exports } = moduleShape(rel, tree);
     const resolved = [];
-    for (const { base, names, lazy, specifier } of refs) {
+    for (const { base, names, lazy, specifier, line } of refs) {
       const target = base && resolveFile(fileSet, base);
       if (!target) {
         if (base !== null) unresolvedStaticImports.push({ source: rel, target: base, specifier, lazy });
         continue;
       }
-      if (target !== rel) resolved.push({ target, names, lazy });
+      if (target !== rel) resolved.push({ target, names, lazy, line });
     }
     const seen = new Set();
     modules.set(rel, { exports: exports.filter((e) => !seen.has(e.name) && seen.add(e.name)), refs: resolved });

@@ -14,7 +14,7 @@
     {
       "name": "guard-ratchet",
       "source": "./skills/guard-ratchet",
-      "description": "Ratchet-style source guards for code quality gates"
+      "description": "Executable quality guards that keep autonomous coding agents from making a repository worse"
     },
     {
       "name": "reader-first-writing",

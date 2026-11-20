@@ -1,62 +1,67 @@
 #!/usr/bin/env node
 /**
- * 测试形态守卫：只看测试源码的形状，不运行测试、不读耗时
+ * Test-shape detector: looks at test source shape only; it neither runs tests nor reads timings.
  *
- * 扫描 backend/tests、assistant/tests、frontend 下的 *.test.{js,jsx,mjs} 与 *.spec.*。
+ * Scans *.test.{js,jsx,mjs} and *.spec.* under backend/tests, assistant/tests and frontend.
+ * Keys look like `path#outer describe>case title`, with no line number; a repeated (rule, key)
+ * gets ~2 ~3 appended.
  *
- * 直接失败（不进基线）：
- *   - 测试体里没有任何断言（assert / node:assert 导入的函数 / expect( / 测试对象的 .plan( / t.assert.*）
- *   - 提交了 test.only / it.only / describe.only 或 { only: true }（会让同文件其余测试不跑）
- *   - 只比较字面量的空断言：assert.ok(true)、assert.equal(1, 1)、expect(true).toBe(true)
- *   - 非端到端测试里出现 waitForTimeout，或 setTimeout / sleep 的延迟字面量 > MAX_DELAY_MS
- *   - playwright 出现在端到端目录 backend/tests/e2e 之外
- *   - backend/package.json 的 test / test:coverage 会扫到 tests/e2e
+ * hard (writing that should never be accepted):
+ *   focused-test            committed test.only / it.only / describe.only, fit / fdescribe or { only: true }
+ *                           (silently stops the rest of the file from running)
+ *   test-without-assertion  a test body with no assertion at all (assert / functions imported from
+ *                           node:assert / expect( / the test object's .plan( / t.assert.*)
+ *   tautological-assertion  an empty assertion comparing only literals: assert.ok(true),
+ *                           assert.equal(1, 1), expect(true).toBe(true)
+ *   long-fixed-wait         waitForTimeout in a non-e2e test, or a setTimeout / sleep delay literal > MAX_DELAY_MS
+ *   playwright-outside-e2e  playwright appearing outside the e2e directory backend/tests/e2e
+ *   e2e-in-default-command  the test / test:coverage scripts in backend/package.json would collect tests/e2e
+ *   guard-allow-invalid     a retention marker that is malformed or has no violation left
  *
- * 记入 scripts/test-shape-baseline.json，只许降不许新增：
- *   - 每个测试文件里 listen( / initSchema( / chromium.launch 的次数（新文件超过 1 次算失败）；
- *     在同一函数里 listen 后马上 close 的是探测空闲端口，不算启动服务
- *   - test.skip / it.skip / describe.skip 的位置（文件 + 标题）
+ * findings (existing offenders are compared by scripts/guard.py):
+ *   heavy-setup  count per test file of listen( / initSchema( / chromium.launch (only emitted when
+ *                above 1; count is the number of calls); a listen that is followed by close in the
+ *                same function is a free-port probe and does not count as starting a server
+ *   skip         test.skip / it.skip / describe.skip; key is file + title, count is 1
  *
- * 有意重复初始化（例如验证重复执行不出错）用 `// guard-allow(tests): 理由` 标在调用旁边，
- * 规则见 guard-common.mjs。
+ * A missing or unreadable backend/package.json, or a missing test script in it, goes into unsupported.
+ * Deliberately repeated initialisation (for example checking that running twice is harmless) carries
+ * `// guard-allow(tests): reason` next to the call; the rules are in guard-common.mjs.
  *
- * 用法：
- *   node scripts/check-tests.mjs [--root <dir>] [--baseline <path>] [--update-baseline]
+ * Usage:
+ *   node check-tests.mjs [--root <dir>]
  *
- * 退出码：0 通过 / 1 存在违规
+ * Output: a detector@2 JSON document. Exit codes: 0 scan completed / 1 crash / 2 usage error.
  */
 
 import { existsSync, globSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import {
-  BASELINE_NOTE, allowFailures, baselineFailures, collectAllowMarkers, collectCodeFiles, compareCounts, compareSets, countKeys, finish, loadBaseline,
-  parseArgs, parseFiles, section, stringValue, suffixDuplicates, walk, writeBaseline,
+  collectAllowMarkers, collectCodeFiles, dedupeKeys, emit, parseArgs, parseFiles, stringValue, walk,
 } from './guard-common.mjs';
 
-const SCRIPT = 'check-tests.mjs';
-const DEFAULT_BASELINE = path.join('scripts', 'test-shape-baseline.json');
 const SCAN_DIRS = ['backend/tests', 'assistant/tests', 'frontend'];
 const TEST_FILE_RE = /\.(test\.(js|jsx|mjs)|spec\.[^./]+)$/;
-const MIN_TEST_CASE_COUNT = 1;
 const E2E_DIR = 'backend/tests/e2e/';
 const BACKEND_TEST_SCRIPTS = ['test', 'test:coverage'];
 const MAX_DELAY_MS = 50;
 
 const TEST_NAMES = new Set(['test', 'it']);
-// test.before / it.skip 这类不是要求断言的测试体
+// test.before / it.skip and the like are not test bodies that must assert
 const NON_TEST_MODIFIERS = new Set(['skip', 'todo', 'before', 'after', 'beforeEach', 'afterEach']);
 const SUITE_NAMES = new Set(['test', 'it', 'describe']);
 const ASSERT_MODULES = new Set(['assert', 'assert/strict', 'node:assert', 'node:assert/strict']);
-// 比较前两个参数的断言方法；ok 和直接调用 assert(x) 只看第一个参数
+// Assertion methods that compare their first two arguments; ok and a direct assert(x) look only at the first
 const COMPARE_ASSERTS = new Set([
   'equal', 'strictEqual', 'deepEqual', 'deepStrictEqual',
   'notEqual', 'notStrictEqual', 'notDeepEqual', 'notDeepStrictEqual',
 ]);
 const HEAVY_SETUP = ['listen', 'initSchema', 'chromium.launch'];
 const FUNCTION_TYPES = new Set(['FunctionExpression', 'ArrowFunctionExpression']);
+const FOCUS_ALIASES = new Set(['fit', 'fdescribe']);
 
-// ─── AST 小工具 ──────────────────────────────────────────────────────────────
-// 成员链/调用链最左边的标识符：expect(x).toBe → expect，assert.strictEqual → assert
+// ─── AST helpers ────────────────────────────────────────────────────────────
+// Leftmost identifier of a member/call chain: expect(x).toBe -> expect, assert.strictEqual -> assert
 function rootName(node) {
   let cur = node;
   while (cur) {
@@ -77,7 +82,7 @@ function calleeName(callee) {
 
 const lastName = (name) => name?.split('.').pop();
 
-// test(...) / it.only(...) / it.each(rows)(...) → { root, modifier }
+// test(...) / it.only(...) / it.each(rows)(...) -> { root, modifier }
 function testCall(node) {
   let callee = node.callee;
   if (callee.type === 'CallExpression') callee = callee.callee;
@@ -120,7 +125,7 @@ function hasAssertion(fn, assertNames) {
 const isLiteral = (node) => node?.type === 'Literal'
   || (node?.type === 'UnaryExpression' && node.argument.type === 'Literal');
 
-// assert.ok(true) / t.assert.equal(1, 1) / expect(true).toBe(true) 这类结果写死的断言
+// Assertions with a hard-wired result: assert.ok(true) / t.assert.equal(1, 1) / expect(true).toBe(true)
 function isTrivialAssertion(node, assertNames) {
   const { callee } = node;
   if (callee.type === 'MemberExpression' && callee.object.type === 'CallExpression'
@@ -139,33 +144,54 @@ function isTrivialAssertion(node, assertNames) {
   return COMPARE_ASSERTS.has(method) && isLiteral(node.arguments[0]) && isLiteral(node.arguments[1]);
 }
 
-// ─── 单文件检查 ──────────────────────────────────────────────────────────────
-function checkFocusAndTrivial(file, call, found) {
-  const where = `${file.rel}:${call.loc.start.line}`;
+// ─── Per-file checks ────────────────────────────────────────────────────────
+// Chain of outer describe>case titles (including the node itself if it is a test call); (top-level) when not inside any test
+function scopeKey({ parents }, node) {
+  const titles = [];
+  for (let cur = node; cur; cur = parents.get(cur)) {
+    if (cur.type !== 'CallExpression') continue;
+    const info = testCall(cur);
+    if (info) titles.unshift(stringValue(cur.arguments[0]) ?? info.modifier ?? '(anonymous)');
+    else if (cur.callee.type === 'Identifier' && FOCUS_ALIASES.has(cur.callee.name)) {
+      titles.unshift(stringValue(cur.arguments[0]) ?? cur.callee.name);
+    }
+  }
+  return titles.length ? titles.join('>') : '(top-level)';
+}
+
+function reportHard(ctx, node, rule, message, key = scopeKey(ctx, node)) {
+  ctx.found.hard.push({
+    rule, key: `${ctx.file.rel}#${key}`, path: ctx.file.rel, line: node.loc.start.line, message,
+  });
+}
+
+function checkFocus(ctx, call) {
   const info = testCall(call);
   const onlyOption = info && call.arguments.some((a) => a.type === 'ObjectExpression' && a.properties.some(
     (p) => p.type === 'Property' && (p.key.name ?? p.key.value) === 'only' && p.value.value === true));
-  if (info?.modifier === 'only' || onlyOption) found.hard.push(`${where} 提交了 ${info.root}.only，同文件其余测试会被跳过`);
-  if (isTrivialAssertion(call, found.assertNames)) found.hard.push(`${where} 断言只比较字面量，结果写死，等于没测`);
+  if (info?.modifier === 'only') reportHard(ctx, call, 'focused-test', `${info.root}.only stops the rest of the file from running`);
+  else if (onlyOption) reportHard(ctx, call, 'focused-test', `${info.root} with { only: true } stops the rest of the file from running`);
+  else if (call.callee.type === 'Identifier' && FOCUS_ALIASES.has(call.callee.name)) {
+    reportHard(ctx, call, 'focused-test', `${call.callee.name} stops the rest of the file from running`);
+  }
 }
 
-function checkAssertions(file, call, found) {
+function checkAssertions(ctx, call) {
   const info = testCall(call);
   if (!info || !TEST_NAMES.has(info.root) || NON_TEST_MODIFIERS.has(info.modifier)) return;
   const fn = [...call.arguments].reverse().find((a) => FUNCTION_TYPES.has(a.type));
-  if (!fn || hasAssertion(fn, found.assertNames)) return;
-  const title = stringValue(call.arguments[0]) ?? '(匿名)';
-  found.hard.push(`${file.rel}:${call.loc.start.line} 测试「${title}」没有任何断言`);
+  if (!fn || hasAssertion(fn, ctx.assertNames)) return;
+  const title = stringValue(call.arguments[0]) ?? '(anonymous)';
+  reportHard(ctx, call, 'test-without-assertion', `test "${title}" has no assertion`);
 }
 
-function checkDelays(file, call, found) {
-  if (file.rel.startsWith(E2E_DIR)) return;
+function checkDelays(ctx, call) {
+  if (ctx.file.rel.startsWith(E2E_DIR)) return;
   const name = lastName(calleeName(call.callee));
-  const where = `${file.rel}:${call.loc.start.line}`;
-  if (name === 'waitForTimeout') found.hard.push(`${where} 非端到端测试不许用 waitForTimeout`);
+  if (name === 'waitForTimeout') reportHard(ctx, call, 'long-fixed-wait', 'waitForTimeout is not allowed in non-e2e tests');
   const delay = name === 'setTimeout' ? call.arguments[1] : name === 'sleep' ? call.arguments[0] : null;
   if (delay?.type === 'Literal' && typeof delay.value === 'number' && delay.value > MAX_DELAY_MS) {
-    found.hard.push(`${where} ${name} 延迟 ${delay.value}ms，非端到端测试上限 ${MAX_DELAY_MS}ms`);
+    reportHard(ctx, call, 'long-fixed-wait', `${name} delay of ${delay.value}ms exceeds the ${MAX_DELAY_MS}ms limit for non-e2e tests`);
   }
 }
 
@@ -177,15 +203,15 @@ function moduleSource(node) {
   return null;
 }
 
-function checkPlaywright(file, node, found) {
-  if (file.rel.startsWith(E2E_DIR)) return;
+function checkPlaywright(ctx, node) {
+  if (ctx.file.rel.startsWith(E2E_DIR)) return;
   const source = moduleSource(node);
   if (source && /^(@playwright\/|playwright)/.test(source)) {
-    found.hard.push(`${file.rel}:${node.loc.start.line} playwright 只允许出现在 ${E2E_DIR}`);
+    reportHard(ctx, node, 'playwright-outside-e2e', `playwright is only allowed under ${E2E_DIR}`, source);
   }
 }
 
-// server.listen(...) 所在的 server 变量，在声明它的函数里又被 server.close(...)：探测空闲端口
+// A server variable that gets server.listen(...) and, in the function declaring it, server.close(...): a free-port probe
 function isPortProbe(file, call) {
   const obj = call.callee.type === 'MemberExpression' ? call.callee.object : null;
   if (obj?.type !== 'Identifier') return false;
@@ -204,23 +230,35 @@ function isPortProbe(file, call) {
     && !n.callee.computed && n.callee.property.name === 'close');
 }
 
-function recordShape(file, call, found) {
+function recordShape(ctx, call) {
+  const { file, found } = ctx;
   const name = calleeName(call.callee);
   const metric = HEAVY_SETUP.find((m) => m === name || (!m.includes('.') && lastName(name) === m));
   if (metric && !(metric === 'listen' && isPortProbe(file, call))
       && !found.allow.covers(file.rel, call.loc.start.line)) {
-    found.heavy.push(`${file.rel}#${metric}`);
+    const key = `${file.rel}#${metric}`;
+    if (!found.heavy.has(key)) found.heavy.set(key, { count: 0, path: file.rel, line: call.loc.start.line, metric });
+    found.heavy.get(key).count += 1;
   }
   const info = testCall(call);
   if (info?.modifier === 'skip' && call.callee.type === 'MemberExpression') {
-    found.skips.push(`${file.rel}#${info.root}.skip ${stringValue(call.arguments[0]) ?? '(匿名)'}`);
+    const title = stringValue(call.arguments[0]) ?? '(anonymous)';
+    found.skips.push({
+      rule: 'skip',
+      key: `${file.rel}#${info.root}.skip ${title}`,
+      path: file.rel,
+      line: call.loc.start.line,
+      message: `permanently skipped test: ${title}`,
+    });
   }
 }
 
 function inspectFile(file, found) {
-  found.assertNames = assertLocals(file.tree);
-  for (const [node, parent] of walk(file.tree)) {
-    checkPlaywright(file, node, found);
+  const parents = new Map();
+  for (const [node, parent] of walk(file.tree)) parents.set(node, parent);
+  const ctx = { file, found, parents, assertNames: assertLocals(file.tree) };
+  for (const [node, parent] of parents) {
+    checkPlaywright(ctx, node);
     if (node.type !== 'CallExpression') continue;
     const info = testCall(node);
     const isHook = info && ['before', 'after', 'beforeEach', 'afterEach'].includes(info.modifier);
@@ -228,14 +266,17 @@ function inspectFile(file, found) {
         && !(parent?.type === 'CallExpression' && parent.callee === node)) {
       found.testCases += 1;
     }
-    checkAssertions(file, node, found);
-    checkFocusAndTrivial(file, node, found);
-    checkDelays(file, node, found);
-    recordShape(file, node, found);
+    checkAssertions(ctx, node);
+    checkFocus(ctx, node);
+    if (isTrivialAssertion(node, ctx.assertNames)) {
+      reportHard(ctx, node, 'tautological-assertion', 'assertion compares only literals, so the result is fixed and tests nothing');
+    }
+    checkDelays(ctx, node);
+    recordShape(ctx, node);
   }
 }
 
-// ─── backend 默认测试命令 ─────────────────────────────────────────────────────
+// ─── backend default test commands ──────────────────────────────────────────
 function scriptTargets(cmd) {
   return cmd.split(/\s+/).slice(1)
     .map((w) => w.replace(/^['"]|['"]$/g, ''))
@@ -252,84 +293,63 @@ function scansE2E(backendDir, cmd) {
   });
 }
 
+// Returns { hard, unsupported }: a command that would collect e2e is hard; a missing or unreadable package.json or command is unsupported
 function checkBackendScripts(root) {
-  const pkgPath = path.join(root, 'backend', 'package.json');
-  if (!existsSync(pkgPath)) return ['找不到 backend/package.json'];
-  const scripts = JSON.parse(readFileSync(pkgPath, 'utf8')).scripts || {};
-  const problems = [];
+  const rel = 'backend/package.json';
+  const pkgPath = path.join(root, rel);
+  if (!existsSync(pkgPath)) return { hard: [], unsupported: [{ path: rel, message: `${rel} not found` }] };
+  const text = readFileSync(pkgPath, 'utf8');
+  let scripts;
+  try {
+    scripts = JSON.parse(text).scripts || {};
+  } catch (err) {
+    return { hard: [], unsupported: [{ path: rel, message: `cannot read ${rel}: ${err.message}` }] };
+  }
+  const hard = [];
+  const unsupported = [];
   for (const name of BACKEND_TEST_SCRIPTS) {
-    if (!scripts[name]) problems.push(`backend/package.json 缺少 ${name} 命令`);
+    if (!scripts[name]) unsupported.push({ path: rel, message: `missing "${name}" script` });
     else if (scansE2E(path.join(root, 'backend'), scripts[name])) {
-      problems.push(`backend/package.json 的 ${name} 会扫到 tests/e2e（浏览器测试只许单独跑）`);
+      hard.push({
+        rule: 'e2e-in-default-command',
+        key: `${rel}#${name}`,
+        path: rel,
+        line: text.split('\n').findIndex((l) => l.includes(`"${name}"`)) + 1 || 1,
+        message: `${name} would collect tests/e2e (browser tests must run on their own)`,
+      });
     }
   }
-  return problems;
+  return { hard, unsupported };
 }
 
-// ─── 汇总 ────────────────────────────────────────────────────────────────────
-function collectTestShape(root) {
-  const rels = SCAN_DIRS.flatMap((dir) => collectCodeFiles(root, dir))
-    .filter((rel) => TEST_FILE_RE.test(rel));
+// ─── Summary ────────────────────────────────────────────────────────────────
+function main() {
+  const { root } = parseArgs(process.argv.slice(2));
+  const rels = SCAN_DIRS.flatMap((dir) => collectCodeFiles(root, dir)).filter((rel) => TEST_FILE_RE.test(rel));
   const { parsed, parseFailures } = parseFiles(root, rels);
   const allow = collectAllowMarkers(parsed, 'tests');
-  const found = { hard: checkBackendScripts(root), heavy: [], skips: [], testCases: 0, allow };
+  const scripts = checkBackendScripts(root);
+  const found = { hard: [], heavy: new Map(), skips: [], testCases: 0, allow };
   for (const file of parsed) inspectFile(file, found);
-  return {
-    allow,
-    hard: found.hard,
-    heavySetup: countKeys(found.heavy),
-    skips: suffixDuplicates(found.skips),
+
+  const heavy = [...found.heavy.entries()].filter(([, h]) => h.count > 1).map(([key, h]) => ({
+    rule: 'heavy-setup',
+    key,
+    count: h.count,
+    path: h.path,
+    line: h.line,
+    message: `${h.metric} appears ${h.count} times in ${h.path}; share one startup`,
+  }));
+  const marks = allow.items();
+  emit({
+    guard: 'tests',
+    coverage: { planned: rels.length, scanned: parsed.length, test_cases: found.testCases },
     parseFailures,
-    fileCount: rels.length,
-    parsedFileCount: parsed.length,
-    testCases: found.testCases,
-  };
-}
-
-// ─── CLI ─────────────────────────────────────────────────────────────────────
-function main() {
-  const args = parseArgs(process.argv.slice(2), DEFAULT_BASELINE);
-  const shape = collectTestShape(args.root);
-  const heavyOver = Object.fromEntries(Object.entries(shape.heavySetup).filter(([, n]) => n > 1).sort());
-  const summary = `解析 ${shape.parsedFileCount}/${shape.fileCount} 个测试文件，识别 ${shape.testCases} 个测试用例`;
-  const healthFailures = [];
-  if (shape.fileCount === 0) healthFailures.push('没有扫到任何测试文件，遍历逻辑可能坏了');
-  if (shape.parsedFileCount !== shape.fileCount) {
-    healthFailures.push(`解析覆盖不完整：计划 ${shape.fileCount} 个文件，成功解析 ${shape.parsedFileCount} 个`);
-  }
-  if (shape.testCases < MIN_TEST_CASE_COUNT) {
-    healthFailures.push(`识别到的测试用例过少（${shape.testCases} < ${MIN_TEST_CASE_COUNT}），测试扫描可能失效`);
-  }
-  for (const rel of shape.parseFailures) healthFailures.push(`解析失败：${rel}（espree 无法解析，请检查语法）`);
-
-  if (args.updateBaseline && healthFailures.length) {
-    finish('测试形态守卫', ['detector health 不通过', ...healthFailures], summary);
-  }
-  if (args.updateBaseline) {
-    writeBaseline(args.baselinePath, { heavySetup: heavyOver, skips: shape.skips });
-    console.log(`[tests] 基线已更新\nFile: ${path.relative(args.root, args.baselinePath)}\n`
-      + `${summary}（重复起服务/建库 ${Object.keys(heavyOver).length} 处、跳过 ${shape.skips.length} 条写入基线）`);
-    process.exit(0);
-  }
-
-  const failures = [...healthFailures];
-  if (shape.hard.length) failures.push(section('测试形态违规（不进基线，必须改掉）：', shape.hard));
-
-  let baseline;
-  try {
-    baseline = loadBaseline(args.baselinePath, { heavySetup: {}, skips: [] });
-  } catch (err) {
-    finish('测试形态守卫', [err.message], summary);
-  }
-  failures.push(...baselineFailures(compareCounts(shape.heavySetup, baseline.heavySetup || {}, { allowed: 1 }), {
-    script: SCRIPT, addedTitle: `这些测试文件里 ${HEAVY_SETUP.join(' / ')} 超过 1 次，而且不在基线里；共用一次启动`,
-  }));
-  failures.push(...baselineFailures(compareSets(shape.skips, baseline.skips || []), {
-    script: SCRIPT, addedTitle: '新增了永久跳过的测试；修好或删掉',
-  }));
-  failures.push(...allowFailures(shape.allow));
-
-  finish('测试形态守卫', failures, summary, BASELINE_NOTE, shape.allow.listing());
+    unsupported: scripts.unsupported,
+    hard: [...scripts.hard, ...dedupeKeys(found.hard), ...marks.hard],
+    advisory: marks.advisory,
+    findings: [...heavy, ...dedupeKeys(found.skips)],
+  });
 }
 
 main();

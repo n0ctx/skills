@@ -1,0 +1,195 @@
+rules:
+  # ---------------------------------------------------------------- stability
+  - id: gr.js.fetch-without-timeout
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      fetch() without a `signal` can hang forever on a stalled connection.
+      Pass `signal: AbortSignal.timeout(ms)` in the options.
+    metadata:
+      category: stability
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      - pattern-either:
+          - pattern: fetch($URL)
+          - pattern: |
+              fetch($URL, {...})
+      - pattern-not: |
+          fetch($URL, {..., signal: $S, ...})
+      # A spread may carry the signal; stay silent rather than guess.
+      - pattern-not: |
+          fetch($URL, {..., ...$OPTS, ...})
+
+  - id: gr.js.empty-catch
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      An empty catch block silently swallows errors and hides failures.
+      Handle the error, log it, or rethrow it; if ignoring is intended, say why in a handled branch.
+    metadata:
+      category: stability
+      confidence: HIGH
+      guard-tier: fast
+    # Comments are not AST nodes, so a comment-only body also matches.
+    pattern: |
+      catch ($E) {}
+
+  - id: gr.js.unbounded-retry
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Infinite loop around try/catch with no break, return or throw retries forever and never surfaces a persistent failure.
+      Bound the attempts and throw after the last one.
+    metadata:
+      category: stability
+      # Intentional daemon/worker loops (queue consumers, pollers) look identical.
+      confidence: MEDIUM
+      guard-tier: fast
+    patterns:
+      - pattern-either:
+          - pattern: while (true) $BODY
+          - pattern: for (;;) $BODY
+      # Body has try...catch and never mentions break/return/throw/exit anywhere (nested included).
+      - metavariable-regex:
+          metavariable: $BODY
+          regex: '^(?=[\s\S]*\btry\b[\s\S]*\bcatch\b)(?![\s\S]*\b(break|return|throw|exit)\b)'
+
+  - id: gr.js.sync-io-in-async
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Synchronous file/process calls inside an async function block the event loop.
+      Use the promise APIs (`fs.promises.*`, `execFile`/`spawn` with await) instead.
+    metadata:
+      category: stability
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      # Semgrep ignores `async` on arrow functions and function expressions (a sync arrow would
+      # match `async (...) => {...}`), so those two are matched as source text with balanced braces.
+      # Limits: an unbalanced brace inside a string/regex literal in the body can cut the region
+      # short, and expression-bodied async arrows (`async () => fs.readFileSync(p)`) are not covered.
+      - pattern-inside:
+          pattern-either:
+            - pattern: |
+                async function $F(...) {...}
+            - pattern: |
+                async $M(...) {...}
+            - pattern-regex: '\basync\s*(?:\([^()]*(?:\([^()]*\)[^()]*)*\)|[A-Za-z_$][\w$]*)\s*(?::\s*[^=\n{]+)?=>\s*(\{(?:[^{}]++|(?1))*+\})'
+            - pattern-regex: '\basync\s+function\b[^({]*\([^()]*(?:\([^()]*\)[^()]*)*\)\s*(?::\s*[^{]+)?(\{(?:[^{}]++|(?1))*+\})'
+      - pattern: $CALLEE(...)
+      - metavariable-regex:
+          metavariable: $CALLEE
+          regex: '^((fs|child_process|childProcess|cp)\.)?(readFileSync|writeFileSync|appendFileSync|execSync|spawnSync)$'
+
+  # ----------------------------------------------------------------- security
+  - id: gr.js.child-process-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Building a shell command from a template literal or string concatenation allows command injection.
+      Use `execFile`/`spawn` with an argument array instead of a shell string.
+    metadata:
+      category: security
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      - pattern: $CALLEE($CMD, ...)
+      # Bare names (destructured/promisified) or child_process members; never `re.exec(...)`.
+      - metavariable-regex:
+          metavariable: $CALLEE
+          regex: '^((child_process|childProcess|cp)\.)?(exec|execSync|execAsync)$'
+      - metavariable-pattern:
+          metavariable: $CMD
+          patterns:
+            - pattern-either:
+                - pattern: |
+                    `...${$X}...`
+                - pattern: $A + $B
+            - pattern-not: |
+                "..." + "..."
+      # Concatenation of string literals only is not injectable.
+      - metavariable-regex:
+          metavariable: $CMD
+          regex: '^(?!\s*("[^"\n]*"|''[^''\n]*'')(\s*\+\s*("[^"\n]*"|''[^''\n]*''))*\s*$)'
+
+  - id: gr.js.sql-string-build
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Building SQL from a template literal or string concatenation allows SQL injection.
+      Pass values as bound parameters (`query("... $1", [x])`) or use a tagged template such as sql`...`.
+    metadata:
+      category: security
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      - pattern-either:
+          - pattern: $DB.$M($SQL, ...)
+          # TypeScript generic call: db.query<Row>(...)
+          - pattern: $DB.$M<$T>($SQL, ...)
+          # The TS parser attaches `await` to the callee when type arguments are present.
+          - pattern: await $DB.$M<$T>($SQL, ...)
+      - metavariable-regex:
+          metavariable: $M
+          regex: '^(query|execute|raw)$'
+      - metavariable-pattern:
+          metavariable: $SQL
+          patterns:
+            - pattern-either:
+                - pattern: |
+                    `...${$X}...`
+                - pattern: $A + $B
+            - pattern-not: |
+                "..." + "..."
+      # Must look like a SQL statement (keeps GraphQL / ORM-DSL `.query()` calls out) and not be literals only.
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: '(?is)^(?!\s*("[^"\n]*"|''[^''\n]*'')(\s*\+\s*("[^"\n]*"|''[^''\n]*''))*\s*$)(?=.*\b(select\b.+\bfrom|insert\s+into|update\b.+\bset|delete\s+from|drop\s+(table|database|index|view|schema)|alter\s+table|create\s+(table|index|view|database)|truncate\s+table|replace\s+into|pragma\s+\w+)\b)'
+
+  - id: gr.js.tls-verify-disabled
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Disabling TLS certificate verification exposes the connection to man-in-the-middle attacks.
+      Remove the override and trust the right CA via `ca` / NODE_EXTRA_CA_CERTS instead.
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+      guard-tier: fast
+    pattern-either:
+      - pattern: |
+          {..., rejectUnauthorized: false, ...}
+      - pattern: $O.rejectUnauthorized = false
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0
+
+  - id: gr.js.eval
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      eval() and new Function() with a non-literal argument execute arbitrary code.
+      Parse data with JSON.parse or dispatch through an explicit lookup table instead.
+    metadata:
+      category: security
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"
+      confidence: HIGH
+      guard-tier: fast
+    patterns:
+      - pattern-either:
+          - pattern: eval($X)
+          - pattern: new Function(..., $X, ...)
+          - pattern: Function(..., $X, ...)
+      - metavariable-pattern:
+          metavariable: $X
+          patterns:
+            - pattern: $X
+            - pattern-not: |
+                "..."
+      - metavariable-regex:
+          metavariable: $X
+          regex: '^(?!\s*`[^`$]*`\s*$)'

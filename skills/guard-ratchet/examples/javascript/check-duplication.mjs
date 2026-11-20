@@ -1,43 +1,40 @@
 #!/usr/bin/env node
 /**
- * 重复代码守卫：连续语句的 token 序列不许新增复制
+ * Duplicate-code detector: a token sequence of consecutive statements that appears in several places.
  *
- * 比较单位是同一语句列表（文件顶层、代码块、case 分支）里连续的可执行语句。
- * 比较前把标识符名字统一抹掉，空白和注释本来就不进 token，所以改名后复制
- * 过来的代码也算重复；字面量、关键字、运算符保持原样。
- * 片段短于 MIN_TOKENS 不报；被更大重复片段包住的小片段不重复报。
- * 片段里每条语句都只是一次简单调用（setter、选择器、hook 取值、注册）时，
- * 抹掉名字后只剩调用形状，这种片段要求保留名字后也逐字相同才报。
+ * The unit of comparison is the run of consecutive executable statements in one statement list
+ * (file top level, block, case branch). Identifier names are erased before comparing; whitespace
+ * and comments never become tokens, so code copied and then renamed still counts as a duplicate.
+ * Literals, keywords and operators stay as they are.
+ * A fragment shorter than MIN_TOKENS is not reported; a small fragment wrapped inside a larger
+ * duplicate is not reported again. When every statement of a fragment is just one simple call
+ * (setter, selector, hook read, registration), erasing names leaves only the call shape, so such a
+ * fragment is reported only if it is also verbatim identical with the names kept.
  *
- * 现有重复按规范化指纹写进 scripts/duplication-baseline.json：
- *   - 新指纹、或已有指纹多出一处复制 → 失败
- *   - 指纹消失或复制处变少 → 虚挂，必须 --update-baseline 清掉
- * 故意保留的平行实现只能通过 --update-baseline 留下，并在提交说明里写理由。
- * 必须逐字保持一致的镜像代码（例如前后端各一份的同一算法）用 `// guard-allow(duplication): 理由`
- * 标在片段旁边：被标记的那处出现不再计入，剩下不足两处的重复组不报。规则见 guard-common.mjs。
+ * One finding per duplicate group: rule is duplicate, key is the content hash of the normalised
+ * fragment, count is the number of occurrences, and message lists the locations. Whether a group
+ * is new, grew or shrank is for scripts/guard.py to decide by comparing count.
+ * Mirror code that must stay verbatim identical (for example one algorithm kept on both frontend
+ * and backend) carries `// guard-allow(duplication): reason` next to the fragment: the marked
+ * occurrence no longer counts, and a group left with fewer than two occurrences is not emitted.
+ * The rules are in guard-common.mjs.
  *
- * 用法：
- *   node scripts/check-duplication.mjs [--root <dir>] [--baseline <path>] [--update-baseline]
+ * Usage:
+ *   node check-duplication.mjs [--root <dir>]
  *
- * 退出码：0 通过 / 1 存在违规
+ * Output: a detector@2 JSON document. Exit codes: 0 scan completed / 1 crash / 2 usage error.
  */
 
 import { createHash } from 'node:crypto';
-import path from 'node:path';
-import {
-  BASELINE_NOTE, allowFailures, baselineFailures, collectAllowMarkers, collectCodeFiles, compareCounts, finish, isTestPath, loadBaseline,
-  parseArgs, parseFiles, walk, writeBaseline,
-} from './guard-common.mjs';
+import { collectAllowMarkers, collectCodeFiles, emit, isTestPath, parseArgs, parseFiles, walk } from './guard-common.mjs';
 
-const SCRIPT = 'check-duplication.mjs';
-const DEFAULT_BASELINE = path.join('scripts', 'duplication-baseline.json');
 const SCAN_DIRS = ['frontend/src', 'backend', 'assistant/server', 'assistant/client/src'];
 const MIN_TOKENS = 40;
 
 const IDENTIFIER_TOKENS = new Set(['Identifier', 'JSXIdentifier', 'PrivateIdentifier']);
 const STATEMENT_LISTS = { Program: 'body', BlockStatement: 'body', StaticBlock: 'body', SwitchCase: 'consequent' };
 
-// ─── 规范化 ──────────────────────────────────────────────────────────────────
+// ─── Normalisation ──────────────────────────────────────────────────────────
 function normalizeTokens(tokens) {
   const out = [];
   for (const tok of tokens) {
@@ -86,7 +83,7 @@ function isPlainValue(node) {
   }
 }
 
-// 整条语句只是用现成的值调用一次函数，例如 setX(settings.x)、useStore((s) => s.x)
+// The whole statement just calls a function once with ready-made values, such as setX(settings.x) or useStore((s) => s.x)
 function isPlainCall(stmt) {
   let call = null;
   if (stmt.type === 'ExpressionStatement') call = stmt.expression;
@@ -94,7 +91,7 @@ function isPlainCall(stmt) {
   return call?.type === 'CallExpression' && isPlainValue(call.callee) && call.arguments.every(isPlainValue);
 }
 
-// 把一个文件拆成若干「连续可执行语句」序列，每条语句带规范化 token 文本
+// Split a file into runs of consecutive executable statements, each statement carrying its normalised token text
 function statementRuns(file, tokens) {
   const runs = [];
   for (const [node] of walk(file.tree)) {
@@ -125,7 +122,7 @@ function statementRuns(file, tokens) {
   return runs;
 }
 
-// ─── 找重复 ──────────────────────────────────────────────────────────────────
+// ─── Finding duplicates ─────────────────────────────────────────────────────
 function indexStatements(runs) {
   const ids = new Map();
   const occurrences = new Map();
@@ -138,7 +135,7 @@ function indexStatements(runs) {
   return occurrences;
 }
 
-// 从一对相同语句出发向后扩展；左侧还能对齐的不是起点，交给更早的那一对
+// Extend forward from a pair of identical statements; a pair that still aligns on the left is not a start, an earlier pair owns it
 function extendPair(runs, [ra, pa], [rb, pb]) {
   const a = runs[ra];
   const b = runs[rb];
@@ -189,7 +186,7 @@ function addClone(groups, { tokens, first, second }) {
   for (const occ of [occurrenceOf(first), occurrenceOf(second)]) group.occurrences.set(occ.location, occ);
 }
 
-// 每处出现都落在别的更大重复片段里面的组不单独报；被有意保留标记覆盖的出现不计入
+// A group whose every occurrence lies inside another, larger duplicate is not reported on its own; occurrences covered by a retention marker do not count
 function dropContained(groups, allow) {
   const byFile = new Map();
   for (const group of groups.values()) {
@@ -201,71 +198,41 @@ function dropContained(groups, allow) {
   const covered = (occ) => byFile.get(occ.rel).some((o) => o !== occ
     && o.range[0] <= occ.range[0] && o.range[1] >= occ.range[1]
     && o.range[1] - o.range[0] > occ.range[1] - occ.range[0]);
-  const result = {};
+  const result = [];
   for (const [fingerprint, group] of [...groups.entries()].sort()) {
     const occs = [...group.occurrences.values()];
     if (occs.every(covered)) continue;
     const kept = occs.filter((o) => !allow.covers(o.rel, o.startLine));
     if (kept.length < 2) continue;
-    result[fingerprint] = { tokens: group.tokens, locations: kept.map((o) => o.location).sort() };
+    const locations = kept.map((o) => o.location).sort();
+    result.push({
+      fingerprint, tokens: group.tokens, locations, first: kept.find((o) => o.location === locations[0]),
+    });
   }
   return result;
 }
 
-function collectDuplicates(root) {
+function main() {
+  const { root } = parseArgs(process.argv.slice(2));
   const rels = SCAN_DIRS.flatMap((dir) => collectCodeFiles(root, dir)).filter((rel) => !isTestPath(rel));
   const { parsed, parseFailures } = parseFiles(root, rels, { tokens: true });
   const runs = parsed.flatMap((file) => statementRuns(file, normalizeTokens(file.tree.tokens)));
   const allow = collectAllowMarkers(parsed, 'duplication');
-  return {
-    duplicates: findClones(runs, allow), allow, parseFailures,
-    fileCount: rels.length, parsedFileCount: parsed.length,
-  };
-}
-
-// ─── CLI ─────────────────────────────────────────────────────────────────────
-function main() {
-  const args = parseArgs(process.argv.slice(2), DEFAULT_BASELINE);
-  const { duplicates, allow, parseFailures, fileCount, parsedFileCount } = collectDuplicates(args.root);
-  const groupCount = Object.keys(duplicates).length;
-  const summary = `解析 ${parsedFileCount}/${fileCount} 个文件，重复 ${groupCount} 段（门槛 ${MIN_TOKENS} token）`;
-  const healthFailures = [];
-  if (fileCount === 0) healthFailures.push(`没有扫到任何文件（${SCAN_DIRS.join('、')}），遍历逻辑可能坏了`);
-  if (parsedFileCount !== fileCount) {
-    healthFailures.push(`解析覆盖不完整：计划 ${fileCount} 个文件，成功解析 ${parsedFileCount} 个`);
-  }
-  for (const rel of parseFailures) healthFailures.push(`解析失败：${rel}（espree 无法解析，请检查语法）`);
-
-  if (args.updateBaseline && healthFailures.length) {
-    finish('重复代码守卫', ['detector health 不通过', ...healthFailures], summary);
-  }
-  if (args.updateBaseline) {
-    writeBaseline(args.baselinePath, { minTokens: MIN_TOKENS, duplicates });
-    console.log(`[duplication] 基线已更新\nFile: ${path.relative(args.root, args.baselinePath)}\n`
-      + `${summary} 写入基线`);
-    process.exit(0);
-  }
-
-  const failures = [...healthFailures];
-
-  let baseline;
-  try {
-    baseline = loadBaseline(args.baselinePath, { duplicates: {} });
-  } catch (err) {
-    finish('重复代码守卫', [err.message], summary);
-  }
-  const current = Object.fromEntries(Object.entries(duplicates).map(([k, v]) => [k, v.locations.length]));
-  const recorded = Object.fromEntries(Object.entries(baseline.duplicates || {})
-    .map(([k, v]) => [k, v.locations.length]));
-  const describe = (key) => `${key}（${duplicates[key].tokens} token）：${duplicates[key].locations.join('、')}`;
-  failures.push(...baselineFailures(compareCounts(current, recorded, { describe }), {
-    script: SCRIPT,
-    addedTitle: `这些连续语句重复了（≥ ${MIN_TOKENS} token），而且不在基线里；抽成共用函数`,
+  const findings = findClones(runs, allow).map(({ fingerprint, tokens, locations, first }) => ({
+    rule: 'duplicate',
+    key: fingerprint,
+    count: locations.length,
+    path: first.rel,
+    line: first.startLine,
+    message: `duplicated consecutive statements (${tokens} tokens): ${locations.join(', ')}`,
   }));
-  failures.push(...allowFailures(allow));
-
-  finish('重复代码守卫', failures, summary,
-    BASELINE_NOTE, allow.listing());
+  emit({
+    guard: 'duplication',
+    coverage: { planned: rels.length, scanned: parsed.length },
+    parseFailures,
+    ...allow.items(),
+    findings,
+  });
 }
 
 main();

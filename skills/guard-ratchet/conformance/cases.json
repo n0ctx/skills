@@ -1,125 +1,168 @@
 [
   {
-    "name": "现状与基线一致时通过",
-    "findings": {"guard": "g", "scanned": 10, "findings": [
-      {"rule": "r", "key": "a#f", "count": 3},
-      {"rule": "s", "key": "b"}
-    ]},
-    "baseline": {"version": 1, "guard": "g", "entries": {"r": {"a#f": 3}, "s": {"b": 1}}},
-    "expect": {"pass": true, "added": [], "grew": [], "stale": []}
+    "name": "in sync: nothing to report",
+    "baseline": {"fn-complexity": {"src/a.py#parse": 41}, "dead-file": {"src/b.py": 1}},
+    "current": {"fn-complexity": {"src/a.py#parse": 41}, "dead-file": {"src/b.py": 1}},
+    "expect": {}
   },
   {
-    "name": "没有基线文件时，任何发现都算新增",
-    "findings": {"guard": "g", "scanned": 10, "findings": [{"rule": "r", "key": "a"}]},
-    "baseline": null,
-    "expect": {"pass": false, "added": ["r:a"], "grew": [], "stale": []}
+    "name": "no baseline: every finding is new",
+    "baseline": {},
+    "current": {"dead-file": {"src/b.py": 1}},
+    "expect": {"new": ["dead-file:src/b.py"]}
   },
   {
-    "name": "没有基线也没有发现时通过",
-    "findings": {"guard": "g", "scanned": 10, "findings": []},
-    "baseline": null,
-    "expect": {"pass": true, "added": [], "grew": [], "stale": []}
+    "name": "same key under another rule is new",
+    "baseline": {"r": {"a": 1}},
+    "current": {"other": {"a": 1}},
+    "expect": {"new": ["other:a"], "stale": ["r:a"]}
   },
   {
-    "name": "新 key 算新增",
-    "findings": {"guard": "g", "scanned": 10, "findings": [{"rule": "r", "key": "a"}, {"rule": "r", "key": "new"}]},
-    "baseline": {"version": 1, "guard": "g", "entries": {"r": {"a": 1}}},
-    "expect": {"pass": false, "added": ["r:new"], "grew": [], "stale": []}
+    "name": "ratchet: count up is worse",
+    "baseline": {"r": {"a": 3}},
+    "current": {"r": {"a": 5}},
+    "expect": {"worse": ["r:a"]}
   },
   {
-    "name": "同一 key 在另一条规则下也算新增",
-    "findings": {"guard": "g", "scanned": 10, "findings": [{"rule": "other", "key": "a"}]},
-    "baseline": {"version": 1, "guard": "g", "entries": {"r": {"a": 1}, "other": {}}},
-    "expect": {"pass": false, "added": ["other:a"], "grew": [], "stale": ["r:a"]}
+    "name": "ratchet: count down is stale (baseline must be tightened)",
+    "baseline": {"r": {"a": 3}},
+    "current": {"r": {"a": 2}},
+    "expect": {"stale": ["r:a"]}
   },
   {
-    "name": "计数上涨算变差",
-    "findings": {"guard": "g", "scanned": 10, "findings": [{"rule": "r", "key": "a", "count": 5}]},
-    "baseline": {"version": 1, "guard": "g", "entries": {"r": {"a": 3}}},
-    "expect": {"pass": false, "added": [], "grew": ["r:a"], "stale": []}
+    "name": "ratchet: fixed entry is stale",
+    "baseline": {"r": {"a": 1}},
+    "current": {},
+    "expect": {"stale": ["r:a"]}
   },
   {
-    "name": "计数下降但未更新基线算虚挂",
-    "findings": {"guard": "g", "scanned": 10, "findings": [{"rule": "r", "key": "a", "count": 2}]},
-    "baseline": {"version": 1, "guard": "g", "entries": {"r": {"a": 3}}},
-    "expect": {"pass": false, "added": [], "grew": [], "stale": ["r:a"]}
+    "name": "renamed file: baseline keys follow the rename",
+    "baseline": {"fn-complexity": {"src/old.py#parse": 30}},
+    "current": {"fn-complexity": {"src/new.py#parse": 30}},
+    "renames": {"src/old.py": "src/new.py"},
+    "expect": {"moved": ["fn-complexity:src/new.py#parse"]}
   },
   {
-    "name": "条目消失但未清理算虚挂",
-    "findings": {"guard": "g", "scanned": 10, "findings": []},
-    "baseline": {"version": 1, "guard": "g", "entries": {"r": {"a": 1}}},
-    "expect": {"pass": false, "added": [], "grew": [], "stale": ["r:a"]}
+    "name": "rename does not rewrite a longer path that merely starts the same",
+    "baseline": {"r": {"src/a.js": 1, "src/a.jsx": 1}},
+    "current": {"r": {"src/b.js": 1, "src/a.jsx": 1}},
+    "renames": {"src/a.js": "src/b.js"},
+    "expect": {"moved": ["r:src/b.js"]}
   },
   {
-    "name": "同一 rule+key 重复出现时累加",
-    "findings": {"guard": "g", "scanned": 10, "findings": [{"rule": "r", "key": "a"}, {"rule": "r", "key": "a"}]},
-    "baseline": {"version": 1, "guard": "g", "entries": {"r": {"a": 1}}},
-    "expect": {"pass": false, "added": [], "grew": ["r:a"], "stale": []}
+    "name": "symbol moved to another file without getting worse is a move",
+    "baseline": {"fn-complexity": {"src/a.py#parse": 30}},
+    "current": {"fn-complexity": {"src/b.py#parse": 28}},
+    "expect": {"moved": ["fn-complexity:src/b.py#parse"], "stale": ["fn-complexity:src/b.py#parse"]}
   },
   {
-    "name": "count 为 0 的发现视为不存在",
-    "findings": {"guard": "g", "scanned": 10, "findings": [{"rule": "r", "key": "a", "count": 0}]},
-    "baseline": {"version": 1, "guard": "g", "entries": {}},
-    "expect": {"pass": true, "added": [], "grew": [], "stale": []}
+    "name": "symbol moved and got worse is not a move",
+    "baseline": {"fn-complexity": {"src/a.py#parse": 30}},
+    "current": {"fn-complexity": {"src/b.py#parse": 35}},
+    "expect": {"new": ["fn-complexity:src/b.py#parse"], "stale": ["fn-complexity:src/a.py#parse"]}
   },
   {
-    "name": "提示不影响判定，也不进基线",
-    "findings": {"guard": "g", "scanned": 10, "advisory": ["a#f 复杂度 26，接近门槛 30"], "findings": [{"rule": "r", "key": "a"}]},
-    "baseline": {"version": 1, "guard": "g", "entries": {"r": {"a": 1}}},
-    "expect": {"pass": true, "added": [], "grew": [], "stale": []}
+    "name": "symbol split into two files is not a move",
+    "baseline": {"fn-complexity": {"src/a.py#parse": 30}},
+    "current": {"fn-complexity": {"src/b.py#parse": 25, "src/c.py#parse": 25}},
+    "expect": {"new": ["fn-complexity:src/b.py#parse", "fn-complexity:src/c.py#parse"], "stale": ["fn-complexity:src/a.py#parse"]}
   },
   {
-    "name": "硬规则违规直接失败，即使基线一致",
-    "findings": {"guard": "g", "scanned": 10, "hard": ["t.test.js:3 提交了 .only"], "findings": []},
-    "baseline": {"version": 1, "guard": "g", "entries": {}},
-    "expect": {"pass": false, "added": [], "grew": [], "stale": [], "blocking_count": 1}
+    "name": "budget: growth within tolerance passes",
+    "meta": {"file-size": {"mode": "budget", "growth": {"pct": 10, "abs": 50}}},
+    "baseline": {"file-size": {"src/a.py": 1000}},
+    "current": {"file-size": {"src/a.py": 1090}},
+    "expect": {"within": ["file-size:src/a.py"]}
   },
   {
-    "name": "解析失败直接失败",
-    "findings": {"guard": "g", "scanned": 10, "parse_failures": ["bad.py"], "findings": []},
-    "baseline": {"version": 1, "guard": "g", "entries": {}},
-    "expect": {"pass": false, "added": [], "grew": [], "stale": [], "blocking_count": 1}
+    "name": "budget: growth beyond both limits is worse",
+    "meta": {"file-size": {"mode": "budget", "growth": {"pct": 10, "abs": 50}}},
+    "baseline": {"file-size": {"src/a.py": 1000}},
+    "current": {"file-size": {"src/a.py": 1101}},
+    "expect": {"worse": ["file-size:src/a.py"]}
   },
   {
-    "name": "扫描数低于下限直接失败（防空转通过）",
-    "findings": {"guard": "g", "scanned": 3, "min_scanned": 100, "findings": []},
-    "baseline": {"version": 1, "guard": "g", "entries": {}},
-    "expect": {"pass": false, "added": [], "grew": [], "stale": [], "blocking_count": 1}
+    "name": "budget: small file may grow by the absolute allowance",
+    "meta": {"file-size": {"mode": "budget", "growth": {"pct": 10, "abs": 50}}},
+    "baseline": {"file-size": {"src/a.py": 100}},
+    "current": {"file-size": {"src/a.py": 150}},
+    "expect": {"within": ["file-size:src/a.py"]}
   },
   {
-    "name": "缺少扫描数直接失败",
-    "findings": {"guard": "g", "findings": []},
-    "baseline": {"version": 1, "guard": "g", "entries": {}},
-    "expect": {"pass": false, "added": [], "grew": [], "stale": [], "blocking_count": 1}
+    "name": "budget: decrease is slack, not a failure",
+    "meta": {"file-size": {"mode": "budget", "growth": {"pct": 10, "abs": 50}}},
+    "baseline": {"file-size": {"src/a.py": 1000}},
+    "current": {"file-size": {"src/a.py": 900}},
+    "expect": {"slack": ["file-size:src/a.py"]}
   },
   {
-    "name": "基线属于别的守卫时报输入错误",
-    "findings": {"guard": "g", "scanned": 10, "findings": []},
-    "baseline": {"version": 1, "guard": "other", "entries": {}},
-    "expect_error": true
+    "name": "budget: new key is new",
+    "meta": {"file-size": {"mode": "budget", "growth": {"pct": 10, "abs": 50}}},
+    "baseline": {},
+    "current": {"file-size": {"src/a.py": 700}},
+    "expect": {"new": ["file-size:src/a.py"]}
   },
   {
-    "name": "基线版本不对时报输入错误",
-    "findings": {"guard": "g", "scanned": 10, "findings": []},
-    "baseline": {"version": 99, "guard": "g", "entries": {}},
-    "expect_error": true
+    "name": "budget higher-is-better: drop beyond tolerance is worse",
+    "meta": {"metric": {"mode": "budget", "direction": "higher", "growth": {"abs": 0.5}}},
+    "baseline": {"metric": {"coverage": 81.0}},
+    "current": {"metric": {"coverage": 80.2}},
+    "expect": {"worse": ["metric:coverage"]}
   },
   {
-    "name": "发现缺少 key 时报输入错误",
-    "findings": {"guard": "g", "scanned": 10, "findings": [{"rule": "r"}]},
-    "baseline": null,
-    "expect_error": true
+    "name": "budget higher-is-better: small drop is within budget, gain is slack",
+    "meta": {"metric": {"mode": "budget", "direction": "higher", "growth": {"abs": 0.5}}, "m2": {"mode": "budget", "direction": "higher", "growth": {"abs": 0.5}}},
+    "baseline": {"metric": {"coverage": 81.0}, "m2": {"x": 10}},
+    "current": {"metric": {"coverage": 80.7}, "m2": {"x": 12}},
+    "expect": {"within": ["metric:coverage"], "slack": ["m2:x"]}
   },
   {
-    "name": "更新基线：按规则和 key 排序，累加重复，去掉 0，不收硬规则和提示",
-    "mode": "update",
-    "findings": {"guard": "g", "scanned": 10, "hard": ["x"], "advisory": ["a 接近门槛"], "findings": [
-      {"rule": "s", "key": "b"},
-      {"rule": "r", "key": "z", "count": 2},
-      {"rule": "r", "key": "a"},
-      {"rule": "r", "key": "a"},
-      {"rule": "t", "key": "gone", "count": 0}
-    ]},
-    "expect_baseline": {"version": 1, "guard": "g", "entries": {"r": {"a": 2, "z": 2}, "s": {"b": 1}}}
+    "name": "keep: removed test is lost, skipped test is lost from active, new test is unrecorded",
+    "meta": {"present": {"mode": "keep"}, "active": {"mode": "keep"}},
+    "baseline": {"present": {"t::a": 1, "t::b": 1}, "active": {"t::a": 1, "t::b": 1}},
+    "current": {"present": {"t::b": 1, "t::c": 1}, "active": {"t::c": 1}},
+    "expect": {"lost": ["active:t::a", "active:t::b", "present:t::a"], "unrecorded": ["active:t::c", "present:t::c"]}
+  },
+  {
+    "name": "keep entries are never paired as moves",
+    "meta": {"surface": {"mode": "keep"}},
+    "baseline": {"surface": {"pkg.a#f(x)": 1}},
+    "current": {"surface": {"pkg.b#f(x)": 1}},
+    "expect": {"lost": ["surface:pkg.a#f(x)"], "unrecorded": ["surface:pkg.b#f(x)"]}
+  },
+  {
+    "name": "update: tighten lowers and drops, never adds or raises",
+    "baseline": {"r": {"lower": 5, "gone": 2, "worse": 3}},
+    "current": {"r": {"lower": 4, "worse": 9, "new": 1}},
+    "expect_update": {"r": {"lower": 4, "worse": 3}}
+  },
+  {
+    "name": "update: budget growth within tolerance is not written back",
+    "meta": {"file-size": {"mode": "budget", "growth": {"pct": 10, "abs": 50}}},
+    "baseline": {"file-size": {"a": 1000, "b": 1000}},
+    "current": {"file-size": {"a": 1050, "b": 800}},
+    "expect_update": {"file-size": {"a": 1000, "b": 800}}
+  },
+  {
+    "name": "update: renames and moves are rewritten",
+    "baseline": {"r": {"old.py#f": 30, "x.py#g": 25}},
+    "current": {"r": {"new.py#f": 30, "y.py#g": 22}},
+    "renames": {"old.py": "new.py"},
+    "expect_update": {"r": {"new.py#f": 30, "y.py#g": 22}}
+  },
+  {
+    "name": "update: keep records new entries, drops lost ones only with an exception",
+    "meta": {"present": {"mode": "keep"}},
+    "baseline": {"present": {"t::a": 1, "t::b": 1}},
+    "current": {"present": {"t::c": 1}},
+    "excepted": ["present:t::a"],
+    "expect_update": {"present": {"t::b": 1, "t::c": 1}}
+  },
+  {
+    "name": "update: higher-is-better metric rises with improvements, never falls",
+    "meta": {"metric": {"mode": "budget", "direction": "higher", "growth": {"abs": 0.5}}},
+    "baseline": {"metric": {"up": 80.0, "down": 80.0}},
+    "current": {"metric": {"up": 82.5, "down": 79.8}},
+    "expect_update": {"metric": {"up": 82.5, "down": 80.0}}
   }
 ]

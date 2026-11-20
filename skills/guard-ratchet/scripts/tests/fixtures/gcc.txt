@@ -1,0 +1,7 @@
+w.c:1:13: warning: unused variable 'x' [-Wunused-variable]
+    1 | int f(){int x;}
+      |             ^
+w.c:1:15: warning: non-void function does not return a value [-Wreturn-type]
+    1 | int f(){int x;}
+      |               ^
+2 warnings generated.

@@ -1,130 +1,81 @@
 ---
 name: guard-ratchet
-description: 在任意仓库落地「只许变好」的源码守卫（基线棘轮）：圈复杂度、文件/函数体量、测试形态（无断言、.only、长 sleep、永久 skip）、死代码（无引用文件/导出）、重复代码、运行形态（循环里逐条查库、深层嵌套循环、无条件 SELECT）、循环依赖、架构边界（禁止层间依赖、跨模块 internal/deep import）。现有问题记进基线不改业务代码，新增违规、变差、基线虚挂都让 lint/CI 失败。只要用户想给仓库加代码质量门禁、防止复杂度/重复/死代码回潮、「新代码不许更差、旧债只许还」、给 lint 链加检查脚本、设计 baseline / ratchet / code health gate / quality gate / fitness function，或者想把某类代码问题变成自动检查——即使没说「守卫」或「基线」——都应使用本 skill。不用于：一次性清理或重构现有代码、跑测试、修单个 lint 报错、只想要一份代码审查意见。
+description: "Install and operate executable quality guards in any repository so that an autonomous coding agent cannot quietly make it worse: complexity and size thresholds adapted to code kind and language, lint/type/security findings ratcheted against a baseline, test integrity (deleted, skipped or weakened tests, test inventory, diff coverage, mutation score), secrets, dependency supply chain, migrations, API snapshots, generated-code drift, performance budgets, risk-tiered verification, and protection of the guard configuration itself (policy and baseline locks, exceptions with audit, trusted CI runs). Use when the user wants a quality gate, code health ratchet, baseline, fitness function, CI guard, or wants to stop regressions, test tampering or AI-generated code from slipping through, even without these words. Also use when a repository already has guard-ratchet guards and a check fails. Not for a one-off cleanup, a single lint error, running tests once, or a code review opinion."
 ---
 
-# 基线棘轮守卫
+# guard-ratchet
 
-目标：让仓库的代码形态只能变好。现有问题记进基线，不要求当天修完；此后出现以下任一情况，检查失败：
-- 新增问题；
-- 已有问题变严重；
-- 问题已修好，但基线里的条目没删（称为「基线虚挂」）。
+The goal is a repository in which every regression an agent could make, and a machine can detect reliably, fails a check that the agent cannot switch off. Existing problems are recorded in a baseline rather than fixed on day one. After that, a run fails on new problems, on existing problems getting worse, on improvements not recorded in the baseline, and on any attempt to loosen the rules, baselines or scan scope. Problems that a machine cannot judge reliably are reported as evidence, not as failures, so the gate stays trustworthy.
 
-代码变坏通常是多次「只加一点」累积出来的。棘轮让每一次变坏都必须显式处理：修掉，或者在提交里写明理由并更新基线。
+## What gets installed
 
-## 两层分工
+- `tools/guard/`: the runner (`guard.py`, `guardlib/`, Python 3.10+, standard library only; 3.11+ to analyze TOML manifests such as `pyproject.toml` and `Cargo.toml`) and the bundled Semgrep rules (Python and JavaScript/TypeScript). It is copied into the repository so CI does not depend on where this skill is installed.
+- `guards/policy.json`: which guards run, when, and with which thresholds. It only states what differs from the defaults in `scripts/guardlib/policy.py`.
+- `guards/baselines/<guard>.json`: recorded findings, written only by `guard.py update`.
+- `guards/exceptions.json`: the only way to let a new or worse problem pass. Each entry has a reason and an approver.
 
-- **棘轮**：比较发现与基线、判定失败、更新基线。所有仓库通用，规格见 `references/contract.md`。
-- **检测器**：在当前仓库里找出「发现」（规则、稳定 key、计数）。随语言、架构和约定而变，由你挑选或编写。
+Detectors measure; the policy judges. A guard is an existing tool (linter, type checker, test runner, scanner) whose output the runner parses through a format adapter (SARIF, JUnit, LCOV/Cobertura/JaCoCo/Go coverage, ESLint JSON, lizard CSV, compiler text, detector JSON), or a built-in guard that needs no tool (secrets, suppressions, test changes, dependencies, migrations, file size, API snapshots, metrics, generated drift). Thresholds are applied centrally by code kind (logic, ui, model, test, script, migration, generated, vendor) and language. That is why the same complexity number can be fine in a JSX view and a problem in business logic.
 
-棘轮按环境选：
-- 开发和 CI 环境都有 Python 3：把 `scripts/ratchet.py` 拷进仓库，检测器输出 JSON 交给它比对。它已通过一致性用例，不要重写。
-- 环境没有 Python，或团队明确不想引入第二种语言：在仓库主语言里重写棘轮，并跑通 `conformance/cases.json`（`python3 scripts/ratchet.py conformance` 是参考实现的跑法）。这是整个落地里最费时的一步。
+## Reference files
 
-## 参考文件
+Read each when you reach the step that needs it, not all at once.
 
-到对应步骤再读，不要一次读完。
-
-| 时机 | 文件 |
+| When | File |
 |---|---|
-| 开始时 | `references/pitfalls.md`：落地时遇到过的坑和处理办法 |
-| 第 2 步 | `references/guard-catalog.md` 中被选中守卫的那几节：信号、key、默认门槛、误报 |
-| 第 3 步 | `references/language-recipes.md` 中当前语言那一节：解析器和现成工具 |
-| 第 4 步前 | `references/detector-contract.md`（检测器必须满足的条件）和 `references/contract.md`（棘轮语义、数据格式、命令行约定） |
-| 仓库是 JS/TS 且要自研检测器 | `examples/javascript/`：七个参考守卫（espree 解析、夹具测试）。先读它的 README；其中的扫描目录和约定属于原仓库，不要照搬 |
+| Before choosing guards | `references/guard-catalog.md`: every guard, what it blocks, what it only reports, defaults, false positives |
+| Choosing tools for the stack | `references/language-recipes.md`: ready-to-paste guard entries per language and ecosystem |
+| Editing the policy | `references/policy.md`: every field, the defaults, code kinds, roles, tiers |
+| Semantics or a surprising result | `references/contract.md`: modes, categories, baselines, update rules, exceptions, CLI, report |
+| Wiring CI and permissions | `references/trust-model.md`: what local runs can and cannot enforce, the trusted CI run, CODEOWNERS |
+| Writing your own detector | `references/detector-contract.md` and `examples/javascript/` (seven reference detectors plus an API surface producer) |
+| Anything goes wrong | `references/pitfalls.md` |
 
-## 工作区安全
+## Setting up guards in a repository
 
-全程不改动别人的工作区状态。需要「去掉别人未提交的改动」或「注入一条违规做演示」时，在临时副本里做（`git archive HEAD` 解压、`cp -R` 或 `git worktree add`）。不要用 `git stash`、`git checkout --`、`git reset` 临时挪走再恢复：中途出错或被打断，别人的改动就丢了。
+Work in this order, because each step relies on the previous one.
 
-## 工作流程
+1. **Understand the repository.** Find the languages and which directories are production code, tests, generated code and vendored code. Find the tools already in use (linters, type checkers, test runners, coverage, CI) and whether lint or CI already fails today. If it does, tell the user, and later run each new guard on its own so the existing failure is not blamed on it. Find out whether other people or agents have uncommitted work in this checkout. Generating baselines from the base commit (step 4) keeps their half-finished work out of the baseline, but do not stash, reset or otherwise move their changes.
 
-按顺序做。
+2. **Get a proposal.** Run `python3 <skill>/scripts/guard.py init --root <repo>` (a dry run). It profiles the repository and proposes guards that fit what is there: no migrations guard without migrations, no test inventory without a test runner that can write JUnit. Compare the proposal with what you found. Add the public API entry points (`roles.public-api`), performance-critical paths (`roles.perf-critical`) and any security-sensitive paths the path pattern misses. Fix code kinds where the default globs are wrong for this repository. Add guards from `language-recipes.md` for tools the repository already uses. Use thresholds the user gave you as they are; never tune a threshold so that today's code passes, because the baseline exists to hold today's problems. When the user named specific guards, do those. When they only gave a direction, show the proposed list with one line of reasoning per guard and let them confirm. Installing a new tool or dependency needs the user's consent unless they already gave it.
 
-### 1. 摸清仓库
+3. **Write the policy.** Run `guard.py init --root <repo> --write`, then edit `guards/policy.json`. It installs the runner into `tools/guard/` and refuses to overwrite an existing policy.
 
-动手前弄清：
-- 语言、目录结构；哪些是正式代码、测试、生成物、第三方代码。
-- 入口和**约定式加载**：按目录扫描加载的插件/hook、框架按文件名加载的配置、测试里用字符串路径加载模块的辅助函数、按文件系统注册的路由等。死代码和循环依赖检测不识别这些就会大量误报。
-- 已有的 lint、类型检查、CI、pre-commit，以及已有守卫脚本的写法。
-- 是否有其他人或 agent 会话在同一分支上改代码（决定第 7 步怎么生成基线）。
-- 现有 lint/CI 链是否本来就失败。如果是，先告诉用户；之后单独运行每个新守卫，证明失败不是新守卫造成的。
+4. **Create the baselines.** Run `python3 tools/guard/guard.py update`. For a guard without a baseline, it scans the *base* commit with the current rules, so problems in uncommitted or unmerged work are reported instead of grandfathered. Until the setup is committed, `update` still exits 1 because every newly installed runner file is `protected` against the old base; the baselines are written regardless. If a hard rule already has violations (a committed `.only`, a secret, a failing test), stop and ask the user whether to fix them now (usually a test or config change, not business code) or to record exceptions.
 
-### 2. 选守卫
+5. **Wire it in.** Add `guard.py check` to the repository's existing lint or pre-commit entry point next to similar checks, and the CI job from `templates/` (`github-actions.yml` or `gitlab-ci.yml`). The CI job runs two steps: the normal check, and the trusted check, which runs with the base branch's runner, policy, baselines and detectors. Add `templates/CODEOWNERS` entries for `guards/`, `tools/guard/` and the CI files. Write the agent instructions below into the repository's agent instruction file (`AGENTS.md`, `CLAUDE.md` or `CONTRIBUTING.md`); run `git check-ignore` on it first and pick a tracked file if it is ignored.
 
-只选仓库里确实存在对应问题来源的守卫：没有数据库就不需要「循环里查库」；Go 编译器已禁止包循环依赖，就不需要循环依赖守卫。
-- 用户点名了守卫：照做。
-- 用户只给了大方向：先列出建议清单和理由，用户确认后再做。
+6. **Verify on the real repository.** Commit the setup on its own: it is the bootstrap change, which no earlier rules can judge, so it gets a human review as a whole (against the old base, every installed runner file is `protected`). Then `guard.py check --full --base HEAD` must exit 0, with the coverage numbers you expect (files, functions, tests) and no guard in `missing-tool` or `error`. In a temporary copy (`git worktree add` or `cp -R`, never the user's working tree), inject one violation per enabled guard and confirm that each one fails for the right reason. Then run `guard.py check --trusted --base <base branch>` in a clean clone where the guards are committed on the base branch, to prove the CI path works.
 
-每条规则定为以下一级：
-- **硬规则**：违反即失败，不进基线。用于当前 0 处、且一出现几乎必然是错误的情况，例如提交了 `.only`、测试没有断言、出现循环依赖。
-- **基线规则**：现有违规记进基线，只许减少。用于存量多、一时修不完的问题。
-- **提示级**：只打印，不进基线，不影响退出码。只用于两种情况：指标接近门槛时的提前提醒（例如复杂度达到门槛的八成）；检测本身不确定、强制处理会带来大量误报的信号（例如用变量动态加载的模块）。不要为了少改代码把本该失败的规则降为提示级：容忍存量是基线的职责，提示一多就没人看。
+## Agent instructions for the repository
 
-有意为之、检测器又分不清的写法（前后端镜像、一次性迁移、验证幂等的重复初始化）：先按 `guard-catalog.md` 各节的「误报」提高检测精度；仍被报的，在代码旁加有意保留标记 `// guard-allow(<守卫名>): <理由>`（语义见 `contract.md`），不要长期留在基线里。原因：基线条目在代码挪位置后会被报成新增，标记跟着代码走。
+Adapt this block to the repository and put it in its agent instruction file:
 
-门槛（复杂度上限、重复片段最小 token 数、延迟毫秒数等）：用户给了就照用，不要为了让现状通过而调整；没给就用 `guard-catalog.md` 的默认值，并告诉用户用了哪些值。
+```markdown
+## Quality guards (guard-ratchet)
 
-圈复杂度的计分和失败提示按 `guard-catalog.md` 第 1 节：同一文件里只被一处调用的未导出函数，判断数加回调用方；失败提示不建议「拆成几个有名字的步骤」，而是提示把本次混进同一函数的另一件事挪出去。
+Run `python3 tools/guard/guard.py check` before reporting any change as done. Exit 0 is done;
+exit 3 means some required guard or tier did not run (not done); exit 1 lists blocking problems.
 
-### 3. 选检测器
+- new / worse / lost / hard: fix the code or the test. If the user agrees the problem is
+  acceptable, record it with `guard.py except add --guard G --rule R --key K --reason "..."
+  --approved-by <user>` and say so in the report. Never invent an approval.
+- stale / moved / unrecorded: run `python3 tools/guard/guard.py update` and commit the baselines.
+- rule-change: run `guard.py update --rules-changed`; if it reports dropped entries, the rule
+  change hides existing problems and needs the user's approval.
+- locked / protected: you changed the policy, a baseline, the guard code or CI. Revert it unless
+  the user asked for that change; then it needs an exception and a code-owner review.
+- Never edit files under guards/ by hand, never weaken a test or a test configuration to get a
+  pass, and never mark a guard optional or move it to a later tier to get a pass.
+```
 
-按顺序选，前一种不够用才用下一种：
-1. 仓库已有的工具或脚本（例如 ESLint 的 complexity 规则、已有的依赖图工具）。
-2. 成熟的现成工具，把它的输出转换成发现（见 `language-recipes.md`）。固定工具版本：升级改变计数会让基线大面积变动。
-3. 用该语言的解析器自己写，基于 AST，不用正则匹配代码结构。
+## Operating guards that already exist
 
-引入新依赖前先问用户，除非用户已经允许。
+When a check fails, read the category first; the next step for each is in `references/contract.md` and in the text report's "next steps". Improvement (`stale`) is recorded with `guard.py update`, which only ever tightens. New problems are fixed, or excepted only with the user's approval, because an exception is a decision about the product, not about the code. Advisory items (assertions removed, expectations rewritten next to implementation changes, destructive migrations, survived mutants, new dependencies) cannot be judged by a machine. Mention the relevant ones in your report with the evidence the runner printed, so a human can decide.
 
-### 4. 定义检测器不变量
+## Custom detectors
 
-写检测器之前，先明确并记录：
-- 扫描范围和排除项；正式代码与测试、生成代码、第三方代码如何区分。
-- 覆盖指标、最低覆盖要求，以及哪些未处理项会让健康检查（detector health，证明这次扫描有效的检查）失败。
-- 稳定 key 的组成。
-- 已知不支持的情况，分成两类：静态分析本来无法确定的输入，可作为已说明的限制；确定性输入处理失败，必须让健康检查失败。
+Write one only when no existing tool covers a problem the repository really has, such as an architecture rule specific to its layout, or N+1 queries through its own query layer. A detector prints one `guard-ratchet/detector@2` JSON document (`references/detector-contract.md`) and must fail closed: a scan that did not complete reports integrity problems, never zero findings. Base it on a real parser, not regular expressions over code structure. Prove it with fixture tests: positive, negative, boundary, key stability, parse failure, empty scan. The JavaScript examples show the patterns; their scan directories and entry points belong to the repository they came from.
 
-### 5. 实现检测器
+## Report to the user
 
-- 同时实现健康检查：核对发现的文件数、解析成功数、关键实体数和无法处理的确定性输入。扫描无效时判失败，不报成 0 个发现，也不写基线。
-- key 用「路径#符号名」或规范化后的内容指纹，不用行号，否则任何无关插行都会让整份基线失效。同名冲突加稳定后缀 `~2`、`~3`。
-- 遵守 `contract.md` 的命令行约定：默认只检查、`--update-baseline` 重写基线、退出码 0/1/2、`--root` 等供测试使用的参数。
-- 每个守卫应在几秒内跑完，因为它会进入每次 lint；超出时让多条规则共用一次解析。
-
-### 6. 写夹具测试
-
-检测器正确性和棘轮正确性分开证明：
-- **检测器**：正例、反例、门槛边界、稳定 key、解析失败、覆盖失败。用成熟外部工具时，测输出转换、key 归一化、覆盖检查和失败传播，不重测工具内部算法。
-- **棘轮**：当前与基线一致时通过；新增发现时失败；改善或消失但基线未收紧时报虚挂并失败。硬规则不需要与基线相关的用例。
-
-多个行为可以合进同一个测试，不要求固定数量的测试函数。所有测试共用一个小辅助（建临时目录、写文件、运行守卫），不要每个测试文件各写一遍。把这些测试接进 lint，否则守卫坏了没人发现。
-
-### 7. 生成基线
-
-- 用当前代码生成基线，不为了让守卫通过而改业务代码。
-- 工作区有别人未提交的改动时：从 `git archive HEAD` 解出的临时目录生成，先拷入本次自己改动的文件，用 `--root` 指向该目录，再把基线拷回仓库，避免把别人的半成品记进基线。
-- 硬规则当前就有违规时：停下来问用户，是修掉这些违规（通常改测试或配置，不改业务代码），还是把它降为基线规则。
-
-### 8. 接入
-
-- 把每个守卫挂进仓库原有的 lint 或 CI 链，放在同类检查旁边。命令名保持一致（例如 `check:duplication`）。脚本头部注释写明：查什么、为什么、怎么更新基线。
-- 提供一个统一入口（例如 `check:guards`、`make guards`），跑完所有守卫再汇总，一个失败不中断其余。原因：lint 链通常用 `&&` 串联，前面一步失败，后面的守卫就不会运行。优先用仓库已有的工具实现（`concurrently`、`make -k`、CI 的矩阵或多步骤）；都没有时写一个小脚本依次运行并记录退出码。
-- 在仓库给 agent 看的说明文件（`AGENTS.md`、`CLAUDE.md`、`CONTRIBUTING.md` 等）里写明：有哪些守卫、统一入口是什么、报基线虚挂时怎么更新基线。写之前用 `git check-ignore <文件>` 确认它受版本控制；被忽略时改写到受版本控制的文件，或告诉用户。
-
-### 9. 在真实仓库上验证
-
-- 直接运行每个守卫，确认覆盖数与第 4 步的预期一致，且退出码为 0。
-- 运行第 6 步的夹具测试。
-- 棘轮是自己重写的：跑一遍 `conformance/cases.json`。
-- 要在真实代码上演示「注入违规会失败」：在临时副本里做。
-
-### 10. 汇报
-
-向用户说明：
-- 加了哪些守卫、各自的命令、哪些是硬规则。
-- 每个基线有多少条；挑几条有代表性的，说明是真问题还是误报。用了有意保留标记的，列出位置和理由。
-- 已知误报来源和处理打算。
-- 为了让硬规则当天通过，改了哪些非业务文件。
-- lint/CI 是否整体通过；没通过时，是哪一步、是否由本次改动引起。
-- 统一入口是什么，写进了哪个说明文件，该文件是否受版本控制。
-- 提醒：别人修好问题后要一并更新基线，否则会被报虚挂；守卫上线后，其他人或其他会话改完代码要跑一次统一入口，否则基线会和代码一起悄悄走样。
+Lead with the verdict. Then give a table of the guards with command, tier, mode (which rules are hard) and baseline size, plus a few representative baseline entries, each judged as a real problem or a false positive. List the exceptions you created and why. Say what you changed outside the guard files to make hard rules pass, whether lint/CI passes as a whole, and which human steps remain (CODEOWNERS, branch protection, required checks). Use the trust model reference to say which protections are enforced only once those human steps are done.

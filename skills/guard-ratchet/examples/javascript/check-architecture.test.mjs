@@ -1,20 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { useGuardFixture } from './guard-fixture.mjs';
+import { useGuardFixture, ruleKeys } from './guard-fixture.mjs';
 
-const { makeRoot, write, read, run } = useGuardFixture('check-architecture.mjs');
+const { makeRoot, write, read, scan } = useGuardFixture('check-architecture.mjs');
 
-test('允许的依赖通过，并报告解析覆盖、模块数和依赖边', () => {
+test('allowed dependencies produce no finding, and coverage counts files, modules and edges', () => {
   const root = makeRoot();
   write(root, 'frontend/app.js', "import { get } from './api/get.js';\nget();\n");
   write(root, 'frontend/api/get.js', 'export function get() {}\n');
-  const result = run(root);
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /2\/2 个正式源码文件已解析，2 个模块 \/ 1 条依赖边/);
+  const { status, doc } = scan(root);
+  assert.equal(status, 0);
+  assert.deepEqual(doc.findings, []);
+  assert.deepEqual(doc.coverage, { planned: 2, scanned: 2, unit: 'files', modules: 2, edges: 1 });
 });
 
-test('测试、依赖、生成和构建目录不进入正式源码扫描', () => {
+test('test, dependency, generated and build directories are not scanned as production source', () => {
   const root = makeRoot();
   write(root, 'frontend/app.js', 'export const app = true;\n');
   write(root, 'backend/tests/bad.test.js', 'export const = ;\n');
@@ -22,102 +23,87 @@ test('测试、依赖、生成和构建目录不进入正式源码扫描', () =>
   write(root, 'vendor/pkg/bad.js', 'export const = ;\n');
   write(root, 'generated/out.js', 'export const = ;\n');
   write(root, 'build/out.js', 'export const = ;\n');
-  const result = run(root);
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /1\/1 个正式源码文件已解析/);
+  const { doc } = scan(root);
+  assert.deepEqual(doc.parse_failures, []);
+  assert.equal(doc.coverage.planned, 1);
+  assert.equal(doc.coverage.scanned, 1);
 });
 
-test('frontend 直接依赖 backend/db 时以稳定 key 作为硬规则失败', () => {
+test('frontend importing backend/db is a forbidden-dependency finding keyed by the module pair', () => {
   const root = makeRoot();
   write(root, 'frontend/a.js', "import { get } from '../backend/db/x.js';\nget();\n");
   write(root, 'backend/db/x.js', 'export function get() {}\n');
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /forbidden-dependency: frontend\/a\.js -> backend\/db\/x\.js/);
+  const { status, doc } = scan(root);
+  assert.equal(status, 0);
+  assert.deepEqual(ruleKeys(doc.findings), ['forbidden-dependency:frontend/a.js -> backend/db/x.js']);
+  assert.deepEqual(doc.findings[0], {
+    rule: 'forbidden-dependency',
+    key: 'frontend/a.js -> backend/db/x.js',
+    count: 1,
+    path: 'frontend/a.js',
+    line: 1,
+  });
+  assert.deepEqual(doc.hard, []);
 });
 
-test('routes 直接依赖 backend/db 时失败', () => {
+test('routes importing backend/db is a finding, even through several imports of the same pair', () => {
   const root = makeRoot();
-  write(root, 'backend/routes/user.js', "import { get } from '../db/user.js';\nget();\n");
-  write(root, 'backend/db/user.js', 'export function get() {}\n');
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /forbidden-dependency: backend\/routes\/user\.js -> backend\/db\/user\.js/);
+  write(root, 'backend/routes/user.js', "import { get } from '../db/user.js';\nimport { set } from '../db/user.js';\nget(); set();\n");
+  write(root, 'backend/db/user.js', 'export function get() {}\nexport function set() {}\n');
+  const { doc } = scan(root);
+  assert.deepEqual(ruleKeys(doc.findings), ['forbidden-dependency:backend/routes/user.js -> backend/db/user.js']);
 });
 
-test('跨 feature 使用公开 index 入口通过', () => {
+test('a cross-feature import of a public index entry is allowed', () => {
   const root = makeRoot();
   write(root, 'features/a/x.js', "import { y } from '../b/index.js';\ny();\n");
   write(root, 'features/b/index.js', 'export function y() {}\n');
   write(root, 'features/b/internal/y.js', 'export function y() {}\n');
-  const result = run(root);
-  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(scan(root).doc.findings, []);
 });
 
-test('跨 feature deep import 产生 internal-api-import', () => {
+test('a cross-feature deep import is an internal-api-import finding; the same feature is allowed', () => {
   const root = makeRoot();
-  write(root, 'features/a/x.js', "import { y } from '../b/internal/y.js';\ny();\n");
+  write(root, 'features/a/x.js', "import { y } from '../b/internal/y.js';\nimport { z } from './internal/z.js';\ny(); z();\n");
+  write(root, 'features/a/internal/z.js', 'export function z() {}\n');
   write(root, 'features/b/index.js', 'export function y() {}\n');
   write(root, 'features/b/internal/y.js', 'export function y() {}\n');
-  const result = run(root);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /internal-api-import: features\/a\/x\.js -> features\/b\/internal\/y\.js/);
+  const { doc } = scan(root);
+  assert.deepEqual(ruleKeys(doc.findings), ['internal-api-import:features/a/x.js -> features/b/internal/y.js']);
 });
 
-test('插入无关代码并新增文件不改变已有 finding key', () => {
+test('inserting unrelated code and adding a file does not change an existing finding key', () => {
   const root = makeRoot();
   write(root, 'frontend/a.js', "import { get } from '../backend/db/x.js';\nget();\n");
   write(root, 'backend/db/x.js', 'export function get() {}\n');
-  const first = run(root);
-  const key = first.stderr.match(/forbidden-dependency: (.+)/)?.[1];
-  assert.equal(first.status, 1);
-  assert.equal(key, 'frontend/a.js -> backend/db/x.js');
+  const before = scan(root).doc;
+  assert.deepEqual(ruleKeys(before.findings), ['forbidden-dependency:frontend/a.js -> backend/db/x.js']);
 
   write(root, 'frontend/a.js', `const unrelated = 1;\n${read(root, 'frontend/a.js')}`);
   write(root, 'frontend/added.js', 'export const unrelated = true;\n');
-  const after = run(root);
-  assert.equal(after.status, 1);
-  assert.ok(after.stderr.includes(`forbidden-dependency: ${key}`));
+  const after = scan(root).doc;
+  assert.deepEqual(ruleKeys(after.findings), ruleKeys(before.findings));
+  assert.equal(after.findings[0].line, 2);
 });
 
-test('源码解析失败、静态引用无法解析和空扫描都 fail closed', () => {
+test('there is no baseline mode: --baseline-mode is an unknown argument', () => {
+  const { status, doc, stderr } = scan(makeRoot(), '--baseline-mode');
+  assert.equal(status, 2);
+  assert.equal(doc, null);
+  assert.match(stderr, /unknown argument: --baseline-mode/);
+});
+
+test('a source that does not parse, an unresolvable static import and an empty scan are all visible', () => {
   const parseRoot = makeRoot();
   write(parseRoot, 'frontend/bad.js', 'export const = ;\n');
-  const parseResult = run(parseRoot);
-  assert.equal(parseResult.status, 1);
-  assert.match(parseResult.stderr, /解析失败：frontend\/bad\.js/);
+  assert.deepEqual(scan(parseRoot).doc.parse_failures, ['frontend/bad.js']);
 
   const importRoot = makeRoot();
   write(importRoot, 'frontend/a.js', "import './missing.js';\n");
-  const importResult = run(importRoot);
-  assert.equal(importResult.status, 1);
-  assert.match(importResult.stderr, /无法解析仓内静态引用：frontend\/a\.js -> \.\/missing\.js/);
+  assert.deepEqual(scan(importRoot).doc.unsupported,
+    [{ path: 'frontend/a.js', message: 'cannot resolve static import ./missing.js' }]);
 
-  const emptyResult = run(makeRoot());
-  assert.equal(emptyResult.status, 1);
-  assert.match(emptyResult.stderr, /没有扫到任何正式源码文件/);
-});
-
-test('显式基线模式覆盖现状相等、新增和 stale 三种棘轮结果', () => {
-  const root = makeRoot();
-  write(root, 'backend/routes/user.js', "import '../db/user.js';\n");
-  write(root, 'backend/db/user.js', 'export const user = 1;\n');
-
-  const update = run(root, '--baseline-mode', '--update-baseline');
-  assert.equal(update.status, 0, update.stderr);
-  assert.deepEqual(JSON.parse(read(root, 'scripts/architecture-baseline.json')).findings,
-    ['forbidden-dependency:backend/routes/user.js -> backend/db/user.js']);
-  assert.equal(run(root, '--baseline-mode').status, 0);
-
-  write(root, 'backend/routes/team.js', "import '../db/team.js';\n");
-  write(root, 'backend/db/team.js', 'export const team = 1;\n');
-  const added = run(root, '--baseline-mode');
-  assert.equal(added.status, 1);
-  assert.match(added.stderr, /新增架构边界违规/);
-
-  write(root, 'backend/routes/user.js', 'export const user = 1;\n');
-  write(root, 'backend/routes/team.js', 'export const team = 1;\n');
-  const stale = run(root, '--baseline-mode');
-  assert.equal(stale.status, 1);
-  assert.match(stale.stderr, /基线与现状对不上/);
+  const empty = scan(makeRoot());
+  assert.equal(empty.status, 0);
+  assert.equal(empty.doc.coverage.planned, 0);
 });

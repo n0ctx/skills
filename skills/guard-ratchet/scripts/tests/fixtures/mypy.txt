@@ -1,0 +1,3 @@
+src/typed.py:5: error: Argument 1 to "add" has incompatible type "str"; expected "int"  [arg-type]
+src/typed.py:6: error: Incompatible types in assignment (expression has type "int", variable has type "str")  [assignment]
+Found 2 errors in 1 file (checked 1 source file)

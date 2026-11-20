@@ -17,10 +17,14 @@ jobs:
           node-version: 24
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.x"
+          python-version: "3.12"
       - run: node scripts/validate.mjs
       - run: bash -n scripts/link.sh
-      - run: python3 skills/guard-ratchet/scripts/ratchet.py conformance
+      - name: guard-ratchet tools (pinned; integration tests skip any tool that is missing)
+        run: python3 -m pip install lizard==1.26.1 ruff==0.17.6 semgrep==1.186.0 zizmor==1.32.0 pytest==9.2.0 pytest-cov==7.1.0
       - name: guard-ratchet JavaScript examples
         working-directory: skills/guard-ratchet/examples/javascript
         run: npm ci && npm test
+      - run: python3 skills/guard-ratchet/scripts/guard.py conformance
+      - run: python3 -m unittest discover -s skills/guard-ratchet/scripts/tests
+      - run: semgrep --metrics=off --test skills/guard-ratchet/rules/semgrep/
