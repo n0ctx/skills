@@ -7,6 +7,11 @@
   "description": "Personal agent skills: architecture, engineering, design, writing, and source guards",
   "plugins": [
     {
+      "name": "character-creator",
+      "source": "./skills/character-creator",
+      "description": "Playable AI roleplay character cards: persona prompts, opening messages, dialogue examples"
+    },
+    {
       "name": "dag-engineering",
       "source": "./skills/dag-engineering",
       "description": "Planning and control for large multi-session engineering work"

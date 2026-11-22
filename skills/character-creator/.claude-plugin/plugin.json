@@ -1,0 +1,8 @@
+{
+  "name": "character-creator",
+  "description": "Playable AI roleplay character cards: persona prompts, opening messages, dialogue examples",
+  "version": "1.0.0",
+  "author": { "name": "n0ctx" },
+  "repository": "https://github.com/n0ctx/skills",
+  "skills": "./"
+}

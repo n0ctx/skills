@@ -10,6 +10,7 @@
 
 | 技能 | 用途 |
 |---|---|
+| character-creator | 可直接出演的 AI 角色扮演提示词与角色卡：人设、开场白、示例对话，含 SillyTavern / 角色卡 V2 / 世界书 |
 | dag-engineering | 大规模多会话工程的规划与控制 |
 | guard-ratchet | 给由 agent 维护的仓库装可执行质量守卫：自适应阈值、测试完整性、安全与供应链、接口与迁移检查、防篡改基线（skill 本身为英文） |
 | reader-first-writing | 任何给人读的文字的句子级可读性，不分文体和语言 |

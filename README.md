@@ -10,6 +10,7 @@ Personal collection of agent skills. Each skill is a self-contained directory, w
 
 | Skill | Purpose |
 |---|---|
+| character-creator | Playable AI roleplay prompts and character cards: persona, opening message, example dialogue, lorebooks |
 | dag-engineering | Planning and control for large multi-session engineering work |
 | guard-ratchet | Executable quality guards for agent-maintained repos: adaptive thresholds, test integrity, security and supply chain, API and migration checks, tamper-resistant baselines |
 | reader-first-writing | Sentence-level readability for any text humans read, in any genre or language |
