@@ -1,14 +1,14 @@
 # reader-first-writing
 
-An agent skill for writing and revising text that humans read: articles, emails, notices, reports, marketing copy, social posts, chat replies. It works at the sentence level and applies to any genre or language.
+An agent skill for writing and revising text that humans read: articles, emails, notices, reports, marketing copy, social posts, chat replies. It applies to any genre or language. It works sentence by sentence, and it can add one missing premise a sentence depends on.
 
-It is based on Clark, Martin & Mahowald, *Why is AI-generated language so hard to understand?* (arXiv:2610.29162), which found that LLM output overuses linguistic features known to make text harder for people to process: inanimate subjects with human verbs, long dependencies, dropped optional words, stacked nouns, ad-hoc denominal verbs, and rare word combinations. The skill turns those findings into one test (the reader's effort has to buy something) and seven principles the writing model applies while drafting and revising.
+It is based on Clark, Martin & Mahowald, *Why is AI-generated language so hard to understand?* (arXiv:2610.29162), which found that LLM output overuses linguistic features known to make text harder for people to process: inanimate subjects with human verbs, long dependencies, dropped optional words, stacked nouns, ad-hoc denominal verbs, and rare word combinations. The skill turns those findings into one test (the reader's effort has to buy something) and seven principles the writing model applies while drafting and revising. Two further principles cover failures that paper did not measure: a sentence that depends on a premise the page never states, and a metaphor or spoken phrase that adds no distinction.
 
 It is not an AI-detection evader. It does not add filler or deliberate irregularities; it only aims at text people can read without rereading.
 
 ## Limitations
 
-The paper analyzed English only. The guidance for other languages follows from the same reasoning (limited working memory, shorter dependencies are easier to process) but has not been systematically tested; if a principle does not help in practice, revise it. The skill works at the sentence level and does not fix document structure.
+The paper analyzed English only. The guidance for other languages follows from the same reasoning (limited working memory, shorter dependencies are easier to process) but has not been systematically tested; if a principle does not help in practice, revise it. The skill does not set document structure, length, or tone.
 
 ## Install
 
